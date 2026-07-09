@@ -37,8 +37,10 @@
 
 ## ESTRUCTURA DE ARCHIVOS DEL PROYECTO
 
+Toda la especificación vive dentro del repo, en `project-docs/`. No hay dependencia de carpetas externas.
+
 ```
-/home/claude/teclas-jade-content/
+teclas-jade-web/project-docs/
 ├── 00-marca.md                           # Brand identity, bio, contact
 ├── 01-arquitectura-contenido.md          # Sitemap, payment flow, Supabase schema outline
 ├── 02-assets-faltantes.md                # Asset checklist (logos ✓, copywriting ✓, videos)
@@ -49,16 +51,20 @@
 ├── 07-checklist-de-avance.md             # Master tracking checklist
 ├── 08-copywriting-home.md                # Homepage copy (8 sections, all confirmed)
 ├── 09-kickoff-claude-code.md             # THIS FILE
-├── logo-principal.png                    # Main logo (2000px, white bg)
-├── logo-simplificado.png                 # Simplified logo/favicon (1024px, white bg)
-├── piano/curriculum.md                   # Full curriculum: 5 bloques + exercises
-├── guitarra/curriculum.md                # Full curriculum: 5 bloques + exercises
-├── canto/curriculum.md                   # Full curriculum: 5 bloques + exercises
-├── teoria-musical/curriculum.md          # Full curriculum: 5 bloques + exercises
+├── 10-modelo-de-contenido-y-progresion.md  # Reglas de obligado cumplimiento
+├── 11-guion-de-prompts-claude-code.md    # Guion de prompts fase por fase
+├── assets/logo-principal.png             # Main logo (2000px, white bg)
+├── assets/logo-simplificado.png          # Simplified logo/favicon (1024px, white bg)
+├── piano/curriculum.md                   # Curriculum: 5 bloques + exercises
+├── guitarra/curriculum.md                # Curriculum: 4 bloques + anexo (ver nota)
+├── canto/curriculum.md                   # Curriculum: 4 bloques (ver nota)
+├── teoria-musical/curriculum.md          # Curriculum: 4 bloques + transversal (ver nota)
 ├── Fotos de mi rostro real/
 │   └── WhatsApp Image 2026-07-08 at 5.21.35 PM.jpeg  # Profile photo
 └── README.md                             # Overview of this content package
 ```
+
+> **Nota (discrepancia detectada al importar):** este kickoff y `10-modelo-de-contenido-y-progresion.md` asumen **5 bloques uniformes** en las 4 aulas. Los `curriculum.md` reales solo cumplen eso en Piano; Guitarra y Canto tienen 4 bloques, y Teoría tiene 4 + un bloque transversal. Los nombres de las fases también difieren por aula (ej. Canto usa "Fase Vector" y "Fase Custom/Elite"). Pendiente de resolver con el dueño del proyecto antes de la Fase 4.
 
 **Todos los `.md` de currículo incluyen:**
 - Concepto pedagógico de cada bloque

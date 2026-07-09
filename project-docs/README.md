@@ -5,7 +5,7 @@ Este es el "estudio previo" del contenido de tu web/app, pensado para que lo abr
 ## Cómo está organizado
 
 ```
-teclas-jade-content/
+teclas-jade-web/project-docs/
 ├── README.md                              (este archivo)
 ├── 00-marca.md                            identidad de marca, bio, método, eslogan
 ├── 01-arquitectura-contenido.md           sitemap (web pública + zona premium) y flujo de pago (Mercado Pago — cerrado)

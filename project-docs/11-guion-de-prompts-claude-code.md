@@ -18,7 +18,7 @@
 
 > Hola. Vamos a construir "Teclas Jade", una plataforma de educación musical. Soy el dueño del proyecto y es mi primer proyecto de desarrollo, así que necesito que trabajes conmigo de una forma específica:
 >
-> 1. Toda la especificación del proyecto está en la carpeta `Contenido_Organizado_Web`. Empezá leyendo `09-kickoff-claude-code.md` — ese documento te dice qué leer, en qué orden, y qué construir. Después leé `10-modelo-de-contenido-y-progresion.md`, que tiene reglas de obligado cumplimiento.
+> 1. Toda la especificación del proyecto está en la carpeta `project-docs/` de este mismo repositorio. Empezá leyendo `project-docs/09-kickoff-claude-code.md` — ese documento te dice qué leer, en qué orden, y qué construir. Después leé `project-docs/10-modelo-de-contenido-y-progresion.md`, que tiene reglas de obligado cumplimiento.
 > 2. Vamos a trabajar fase por fase, exactamente como está definido en el kickoff. NUNCA avances a una fase siguiente sin que yo te lo pida explícitamente.
 > 3. Antes de escribir código en cualquier fase, explicame el plan en pasos simples (soy principiante — evitá jerga técnica innecesaria, y cuando uses un término técnico, explicámelo en una línea).
 > 4. Inicializá un repositorio git desde el primer momento y hacé un commit cada vez que algo quede funcionando. Avisame cada vez que hagas un commit y qué incluye.
