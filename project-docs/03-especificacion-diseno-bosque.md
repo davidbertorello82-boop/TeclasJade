@@ -1,0 +1,72 @@
+# Teclas Jade — Especificación de Diseño: "El Bosque Inversivo"
+
+> Este documento reemplaza mi propuesta anterior de paleta (jade/carbón/crema, inspirada en teclas de piano — quedó descartada, ver `paleta-tipografia-propuesta.html` marcado como DEPRECADO). La dirección creativa de esta sección es la tuya, tal como la escribiste, con correcciones técnicas puntuales marcadas explícitamente como **[CORRECCIÓN]** donde el texto original no es implementable tal cual o tiene un riesgo real. Todo lo que no está marcado como corrección queda como lo escribiste.
+
+## 1. Sistema de Diseño (Design Tokens) — DEFINITIVO
+
+- **Background:** `#F7F5F0` (lino/hueso)
+- **Primary (Jade):** `#2C5E43` / `#3B7A57`
+- **Secondary (Tierra):** `#8B5A2B` / `#A0522D`
+- **Text:** `#1A2421`
+- **Highlight:** `#E6DFD3` / `#D4AF37`
+- **Tipografía títulos/poética:** Playfair Display, Cormorant Garamond o Lora
+- **Tipografía interfaz/ejercicios:** Inter o Montserrat
+- **Line-height:** 1.4–1.6 en textos largos
+- **Layout:** whitespace generoso, alineaciones descentradas
+
+## 2. Pantalla Principal: "El Bosque Inversivo"
+
+Estructura de scroll longitudinal tal como la definiste: Hero → Bio → Descripción de plataforma → "El Claro de los Troncos" (Canto / Guitarra / Piano / Teoría) → Cierre comercial (suscripción, contacto).
+
+### 2.A Audio e interacción ASMR — **[CORRECCIÓN]**
+
+Texto original: sonido de bosque que arranca solo al cargar el sitio, y que cambia con el movimiento del mouse.
+
+**Por qué se corrige:** los navegadores (Chrome, Firefox, Safari) bloquean el autoplay de audio con sonido hasta que hay una interacción explícita del usuario — no es negociable a nivel de diseño, es una política del navegador ([Chrome for Developers](https://developer.chrome.com/blog/web-audio-autoplay), [MDN](https://developer.mozilla.org/en-US/docs/Web/Media/Guides/Autoplay)). Además, el sonido ambiental continuo puede competir con el entrenamiento auditivo real (afinación, dictados) que es el corazón del producto.
+
+**Versión corregida:**
+- El sitio carga en silencio. Un gesto de entrada explícito (ej. botón "Entrar al bosque 🌿" en el Hero) dispara el primer sonido — esto además resuelve la restricción del navegador de una sola vez.
+- El audio ASMR (mouse, hover) vive **solo** en las zonas de marca/exploración (Hero, Bio, "Claro de los Troncos"). Nunca dentro de un aula.
+- Dentro de cualquier aula: silencio total automático (esto ya estaba bien definido en la sección 4.B del documento original, "Aislamiento Acústico" — se mantiene tal cual).
+- Botón de mute flotante: se mantiene como estaba especificado.
+
+**Referencia real de que esto funciona a nivel profesional:** [Rainforest Foods, de Immersive Garden](https://www.awwwards.com/case-study-rainforest-foods-by-immersive-garden.html) — sitio premiado, tema 100% naturaleza, sonido diseñado a medida, para audiencia adulta. Dato técnico clave: usaron Pixi.js (motor 2D) con parallax en vez de video o 3D real, específicamente para no sacrificar rendimiento, y armaron una experiencia mobile dedicada aparte. Esa es la técnica recomendada para los "troncos" y el efecto de bosque — no geometría 3D pesada.
+
+### 2.B "El Claro de los Troncos" (menú de aulas)
+
+Se mantiene tal cual: 4 troncos (Canto, Guitarra, Piano, Teoría), tipografía serif, hover flotante sutil.
+
+## 3. Diseño de Movimiento (Motion Design)
+
+Se mantiene: smooth/inertial scroll, transición líquida de 1.2–1.5s al entrar a un aula, fade-out del sonido ambiental antes de que cargue el aula.
+
+**[CORRECCIÓN — adición, no reemplazo]:** falta respetar la preferencia de accesibilidad `prefers-reduced-motion` del sistema operativo del usuario. Quien tenga esa opción activada (por mareos, migrañas, o sensibilidad al movimiento) debe recibir automáticamente transiciones instantáneas o muy reducidas, sin animación líquida. Esto es un estándar web (no una opinión mía) y Claude Code lo puede implementar con una simple media query CSS (`@media (prefers-reduced-motion: reduce)`).
+
+## 4. Interfaz del Aula Virtual
+
+Se mantiene la estética (textura de tronco, esquinas suaves, tipografía serif para instrucciones) y las 3 áreas funcionales (Avatar de IA, Consola de chat, Panel de ejercicios). El diseño del chatbot de IA en sí se movió a un documento aparte: `04-tutores-ia-chatbot.md`, porque es lo bastante grande y con sus propias implicancias de costo/seguridad como para no mezclarlo con el diseño visual.
+
+## 5. Referencias visuales concretas para "El Bosque Inversivo" — DECIDIDO (10/07)
+
+**[Seguro] Antes de las referencias, la verdad incómoda de por qué ninguna de las que viste te convenció:** lo que estás imaginando — perderte en un bosque virgen fotorrealista con árboles gigantes, cascadas, vegetación viva y animales moviéndose — es, en términos técnicos, contenido de nivel de videojuego AAA (piensa en un demo técnico de Unreal Engine, no en una web). Por eso ninguna agencia premiada lo hace así de literal: todas las que armaron sitios "de naturaleza" premiados (incluida Immersive Garden, los mismos del `Rainforest Foods` que ya cité en la sección 2.A) **eligieron a propósito estilización en vez de fotorrealismo** — no por falta de imaginación, sino porque vegetación/agua/fauna fotorrealista renderizada en tiempo real en un navegador (sobre todo en mobile) es un problema real de rendimiento y de presupuesto, no un detalle de estilo. No es que no buscaste bien: es que la referencia exacta que tenés en la cabeza casi no existe como sitio web funcional y liviano, porque nadie la construye así a esa escala.
+
+**Lo que sí es viable, y cómo lograr la sensación sin el costo:** un modelo híbrido — un momento de mayor fidelidad 3D concentrado en la entrada (el gesto "Despertar el bosque"), seguido de una experiencia de scroll liviana con capas 2D en paralaje (no geometría 3D real) que simulan profundidad y vida, con 1-2 detalles "vivos" puntuales (un animal que reacciona al hover, como el camaleón de Rainforest Foods) en vez de fauna animada todo el tiempo. Esto te da la sensación de "bosque vivo" en los momentos clave, sin pagar el costo de renderizar un ecosistema completo en tiempo real.
+
+**3 referencias concretas, cada una con un rol distinto (no las mires como "elegí una entera", sino como piezas a combinar):**
+
+1. **[Explore Primland](https://www.awwwards.com/sites/explore-primland)** (Awwwards Site of the Day, feb. 2026) — **referencia técnica para el momento de entrada.** Terreno 3D real modelado en Blender y renderizado en WebGL, con niebla atmosférica y una cámara que se desliza sobre el paisaje al hacer scroll (así el lugar se siente "navegable", no una foto). Tiene un toggle de estaciones del año como detalle interactivo. Es paisaje de montaña, no selva densa, pero la técnica (cámara deslizándose sobre un 3D real, liviano, activado solo en un momento puntual) es exactamente lo que le daría a tu Hero esa sensación de "entrar caminando" sin cargar todo el sitio con eso.
+2. **[Rainforest Foods, de Immersive Garden](https://www.awwwards.com/case-study-rainforest-foods-by-immersive-garden.html)** — ya citada en la sección 2.A, pero ahora con más detalle: **referencia técnica para el resto del scroll.** Capas de paralaje 2D (no 3D pesado), sonido ambiente disparado por gesto del usuario, y un detalle vivo puntual (un camaleón que cambia de color al interactuar) en vez de fauna animada constante. Ojo: visualmente es más poética/abstracta que literal — si esperabas selva fotorrealista ahí, por eso no te cerró del todo; tomala por la técnica, no por el estilo final.
+3. **[The Law of the Jungle](https://www.awwwards.com/sites/the-law-of-the-jungle)** (Disney, campaña de *El Libro de la Selva*, 2016) — **referencia solo de ambientación/mood, no técnica.** Modelaron en 3D elementos reales de selva (árboles, ramas, flores) para recrear la sensación de "entrar en la Jungla", que es conceptualmente lo más cercano a tu idea original. **Advertencia:** tiene ~10 años, estaba integrado a Tumblr, y es muy probable que ya no funcione online — mirala en capturas/video (buscá "The Law of the Jungle Disney Jungle Book" en YouTube o en la [ficha de FWA](https://thefwa.com/cases/the-law-of-the-jungle)) como inspiración de mood, no la abras esperando que cargue.
+
+**Recomendación final:** no busques más "el sitio perfecto que ya exista" — no lo vas a encontrar porque el estándar de la industria premiada resolvió este mismo problema (bosque inmersivo + rendimiento real) yendo hacia la estilización, no hacia el fotorrealismo. Si estás de acuerdo con el modelo híbrido de arriba, lo dejo como DECIDIDO y se lo paso a Claude Code como especificación técnica concreta.
+
+### Respuestas directas a tus 2 preguntas
+
+- **¿Conviene un menú principal con leves movimientos de naturaleza viva?** Sí, es viable — pero con la técnica de Rainforest Foods (paralaje 2D liviano, detalles puntuales animados) y no con geometría 3D sostenida. Hecho así, no debería entorpecer la carga inicial; hecho con 3D real corriendo todo el tiempo, sí.
+- **¿La música de fondo va con botón de activar sonido?** Ya estaba decidido así en la sección 2.A de este mismo documento (gesto de entrada explícito + botón de mute flotante) — tu descripción de cómo lo imaginás coincide exactamente con lo ya definido, no hace falta cambiar nada ahí.
+
+## 6. Directrices para Claude Code
+
+Se mantienen las 4 directrices originales (semántica HTML5, Web Audio API con gesto de usuario, CSS con variables nativas, diseño responsivo). Se agrega una quinta:
+
+5. **Rendimiento en mobile:** seguir el patrón de Rainforest Foods — parallax 2D optimizado (Pixi.js u otra librería 2D liviana) en vez de geometría 3D real para el efecto de "bosque", y una pasada de optimización específica para mobile antes de dar por terminada cualquier sección.
