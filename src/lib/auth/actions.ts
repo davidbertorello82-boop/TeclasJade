@@ -18,6 +18,9 @@ function mensajeError(mensaje: string): string {
   if (mensaje.includes("Email not confirmed")) {
     return "Todavía no confirmaste tu email. Revisá tu bandeja de entrada.";
   }
+  if (mensaje.includes("email rate limit exceeded")) {
+    return "Se alcanzó el límite de emails por ahora. Esperá unos minutos y probá de nuevo.";
+  }
   return "Algo salió mal. Probá de nuevo en un momento.";
 }
 
