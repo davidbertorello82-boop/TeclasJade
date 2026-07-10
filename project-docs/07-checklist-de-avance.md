@@ -16,6 +16,7 @@ Esta es la lista simple de todo lo que queda. Está en el orden en que te convie
 - [x] **5. Referencias visuales — CERRADO (10/07).** Ver `03-especificacion-diseno-bosque.md` sección 5: como ninguna galería te convenció con algo literal (bosque virgen fotorrealista con animales), investigué por qué — es contenido de nivel de videojuego, por eso ninguna agencia premiada lo hace así — y armé un modelo híbrido con 3 referencias concretas, cada una con un rol técnico distinto (momento 3D puntual en la entrada + paralaje 2D liviano en el resto).
 - [x] **6. Textos de la home — 8/8 CERRADO (10/07).** Los 8 puntos originales de `08-copywriting-home.md` ya tienen texto final confirmado por vos, Hero incluido ("donde cada nota encuentra su raíz") y los 4 troncos reescritos con tono poético (con la corrección real que detectaste en la guitarra: NO se enseña púa desde el primer acorde, eso llega en el Bloque V).
 - [ ] **6b. Punto nuevo: botón "Comprar más mensajes" (punto 9 en `08-copywriting-home.md`) — A REVISAR.** Falta 1 confirmación tuya: uno de los 4 paquetes de mensajes tiene un precio 13 veces más caro por mensaje que los otros 3 — probablemente un error de tipeo ("10 mensajes" en vez de "100"). Confirmame el número real antes de que esto se considere cerrado. Ver `04-tutores-ia-chatbot.md`.
+- [ ] **6c. Nota para la Fase 3: Mercado Pago tiene un MCP server oficial para conectar a Claude Code — no conectar todavía, evaluarlo cuando lleguemos a construir el checkout/webhook de la Fase 3.**
 
 ## 🟢 Ya está resuelto (no tenés que hacer nada acá)
 
