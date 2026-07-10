@@ -29,7 +29,7 @@ export async function signUp(
   const password = String(formData.get("password") ?? "");
 
   const supabase = await createClient();
-  const { error } = await supabase.auth.signUp({
+  const { data, error } = await supabase.auth.signUp({
     email,
     password,
     options: {
@@ -39,6 +39,13 @@ export async function signUp(
 
   if (error) {
     return { error: mensajeError(error.message) };
+  }
+
+  // Supabase no devuelve error si el email ya tiene cuenta confirmada (para
+  // no filtrar qué emails existen): responde "exito" con un user fantasma
+  // sin identidades. Esa es la unica forma de distinguir el caso real.
+  if (data.user && data.user.identities?.length === 0) {
+    return { error: mensajeError("already registered") };
   }
 
   redirect("/registro/revisa-tu-email");
