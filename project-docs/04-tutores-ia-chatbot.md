@@ -75,7 +75,9 @@ Pediste que el alumno tenga visibilidad clara de cuánto lleva consumido, no sol
 - **Cuando quedan 50 o menos** (a partir de 350 consumidos): notificación distinta y más visible — "Te quedan 50 mensajes este mes" — con un link directo al botón de "Comprar más mensajes" (ver abajo), para que la solución esté a un clic cuando el alumno la necesita, no que tenga que ir a buscarla.
 - Técnicamente esto requiere una tabla/contador en Supabase, ej. `uso_mensajes_ia (user_id, mes, mensajes_consumidos)`, que se resetea a 0 cada nuevo mes de suscripción y se incrementa en cada intercambio con cualquiera de los 4 tutores (es la misma "bolsa compartida" ya decidida).
 
-### Compra de mensajes adicionales — A REVISAR (tu propuesta, con un problema de números que hay que corregir)
+### Compra de mensajes adicionales — DECIDIDO (confirmado 10/07)
+
+**[Seguro] Confirmado por vos:** el paquete de AR$4.900 era por **100 mensajes**, no 10 — era un error de tipeo, tal como se sospechaba más abajo. Corregido en la tabla. Se mantiene el historial de por qué se detectó el problema, como referencia.
 
 Pediste agregar un botón tipo "Compra más mensajes para seguir chateando" (mismo lugar/jerarquía visual que el botón de suscripción), con paquetes adicionales. Tu propuesta de precios fue:
 
@@ -88,11 +90,11 @@ Pediste agregar un botón tipo "Compra más mensajes para seguir chateando" (mis
 
 **No estoy de acuerdo con lanzar la tabla tal como la escribiste porque** un paquete con precio por mensaje 13 veces más alto que el resto es, en la práctica, indistinguible de un error de carga de precios para cualquier alumno que haga la cuenta — y en un producto que se apoya en confianza pedagógica, eso cuesta más caro en reputación que lo que genera en ingresos. **Esto es lo que haría en su lugar:** confirmame si "10 mensajes" era un error de tipeo y debía decir "100 mensajes" (mi apuesta más probable), o si es un precio real e intencional (por ejemplo, un paquete de emergencia carísimo a propósito, para desalentar su uso salvo urgencia real) — en ese caso lo dejamos así, pero como decisión explícita, no por accidente. **El riesgo de no corregirlo:** el alumno que menos plata tiene para gastar en el momento (el que compra el paquete más chico) termina pagando el peor precio por mensaje — además de ser mala praxis de producto, es el tipo de detalle que un alumno comenta como queja a otros ("esto es un curro") en vez de recomendar la plataforma.
 
-Paquetes propuestos (pendiente tu confirmación del número corregido):
+Paquetes confirmados:
 
 | Paquete | Precio | Mensajes | AR$/mensaje |
 |---|---|---|---|
-| Chico | AR$4.900 | 100 *(revisar: decía 10)* | ~AR$49 |
+| Chico | AR$4.900 | 100 | ~AR$49 |
 | Mediano | AR$7.900 | 200 | ~AR$39,50 |
 | Grande | AR$10.900 | 300 | ~AR$36,33 |
 | Extra grande | AR$14.900 | 400 | ~AR$37,25 |
