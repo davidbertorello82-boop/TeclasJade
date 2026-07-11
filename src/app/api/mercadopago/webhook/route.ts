@@ -11,6 +11,18 @@ import {
   EstadoMercadoPagoDesconocido,
 } from "@/lib/mercadopago/estados";
 
+// BUG CONOCIDO (Fase 3, sin resolver): el panel de Webhooks de Mercado Pago
+// no persiste la configuracion (notifications_callback_url/topics quedan
+// vacios via API despues de "guardar" en la UI, confirmado con la app
+// "TeclasJade Vendedor Test", id 3864264122401613 - el campo
+// traceability_updated ni se actualiza tras el guardado). Resultado: nunca
+// llega una notificacion real a esta ruta, aunque el checkout se complete y
+// la PreApproval quede "authorized" del lado de Mercado Pago. La suscripcion
+// de prueba de esponja.lisergica@gmail.com (preapproval
+// 9bebf858000e4c558d388da00da9bda5, pago 167414132777) se verifico
+// consultando directo GET /preapproval/{id} y se escribio a mano en
+// Supabase - NO via este endpoint. Hay que resolver esto (reconfigurar el
+// webhook, o migrar a polling activo del estado) antes de producción real.
 export async function POST(request: NextRequest) {
   const searchParams = request.nextUrl.searchParams;
   const dataId = searchParams.get("data.id");

@@ -18,18 +18,27 @@ export async function POST() {
   const cliente = crearClienteMercadoPago();
   const preApproval = new PreApproval(cliente);
 
-  const respuesta = await preApproval.create({
-    body: {
-      reason: RAZON_SUSCRIPCION,
-      auto_recurring: AUTO_RECURRING_SUSCRIPCION,
-      payer_email: user.email!,
-      // Clave: esto es lo unico que le permite al webhook, mas adelante,
-      // saber a que usuario de Supabase corresponde la notificacion.
-      external_reference: user.id,
-      back_url: urlDeVueltaMercadoPago("/suscripcion/confirmacion"),
-      status: "pending",
-    },
-  });
+  let respuesta;
+  try {
+    respuesta = await preApproval.create({
+      body: {
+        reason: RAZON_SUSCRIPCION,
+        auto_recurring: AUTO_RECURRING_SUSCRIPCION,
+        payer_email: user.email!,
+        // Clave: esto es lo unico que le permite al webhook, mas adelante,
+        // saber a que usuario de Supabase corresponde la notificacion.
+        external_reference: user.id,
+        back_url: urlDeVueltaMercadoPago("/suscripcion/confirmacion"),
+        status: "pending",
+      },
+    });
+  } catch (error) {
+    console.error(
+      "Error crudo de Mercado Pago al crear la PreApproval:",
+      JSON.stringify(error, null, 2),
+    );
+    throw error;
+  }
 
   if (!respuesta.init_point) {
     return NextResponse.json(
