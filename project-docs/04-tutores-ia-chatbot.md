@@ -226,6 +226,36 @@ Va en los 4 tutores, sin excepción — un botón/ícono fijo en la interfaz de 
 
 **Dónde se guarda:** una tabla nueva en Supabase, `reportes_error`, con al menos `id, user_id, tutor, tipo_error, contexto_conversacion (json), bloque_o_ejercicio, descripcion_alumno, estado (nuevo/revisado/resuelto), created_at`. Con esto tenés, desde el día 1, una base de datos real de errores reportados por los propios alumnos para ir priorizando qué corregir primero — no hace falta ningún panel sofisticado al principio, alcanza con mirar la tabla directo en Supabase o pedirme que te arme un resumen cuando el sitio ya esté en producción.
 
+## [DECIDIDO 10/07] Comportamiento y personalización del tutor dentro del aula
+
+Con el mecanismo de ejercicios rediseñado (teclado virtual que se toca solo, ver `10-modelo-de-contenido-y-progresion.md` sección 8 — el tutor ya no verifica nada de lo que el alumno toca), el rol del tutor dentro de cada aula queda definido así:
+
+**Rol: guía y consultor, nunca evaluador.** La demostración de "cómo suena, con qué dedos, a qué velocidad" la hace el teclado interactivo por su cuenta — el tutor no reemplaza eso ni juzga si el alumno tocó bien o mal (eso queda 100% en la autoevaluación del propio alumno). El tutor está para lo que el teclado no puede hacer:
+
+1. **Saluda y recuerda el nombre del alumno** entre sesiones.
+2. **Ajusta el tono según la edad** — pero la edad y el nombre se cargan **en el formulario de registro** (lo completa el adulto responsable que crea la cuenta), nunca preguntados por el chatbot en la conversación. El tutor solo *lee* ese dato ya guardado en el perfil para ajustar su trato (más amable y motivador si es un niño/a); no lo sondea él mismo. Esto es coherente con la Corrección 2 de este mismo documento (acceso de menores gestionado por un adulto responsable) — pedirle la edad a un menor directamente por chat sería exponerse justo al riesgo que esa corrección buscaba evitar.
+3. **Chequeo de inactividad/motivación:** si pasan varios días sin que el alumno entre, el tutor lo nota y lo motiva a retomar (mecánica de racha, ya confirmada como referencia tipo Duolingo en `10-modelo-de-contenido-y-progresion.md`).
+4. **Hace preguntas de feedback conversacional** (cómo le está yendo, qué le cuesta) — información útil también para que el profesor priorice mejoras del sistema.
+5. **Propone variantes o ejercicios nuevos** cuando el alumno lo pide (esto ya estaba en el diseño original como "Camino B" de la Corrección 3: generación en vivo, solo para contenido nuevo sin un "original" catalogado).
+6. **Siempre enfocado en lo musical.** Si el alumno se sale del tema, redirige con la versión **cálida pero firme** ya escrita en el bloque de seguridad de este documento ("redirigí amablemente la conversación de vuelta al aprendizaje musical") — se evaluó explícitamente reemplazarla por un corte seco tipo "no puedo responder a tu pregunta" y **se descartó**: con alumnos menores de por medio, una negativa seca puede sentirse fría o grosera: se mantiene la redirección amable.
+
+**[DECIDIDO 11/07] Identidad visual de los tutores: retrato ilustrado sí, avatar animado no (por ahora).** Cada tutor tendrá una **ilustración fija** (retrato dibujado, coherente con la estética del bosque) que aparece junto al chat — el alumno le pone cara al maestro sin animación 3D ni video sintetizado. Se evaluó y se descartó para el MVP un asistente "con rostro y cuerpo humanoide" animado: sería la funcionalidad más cara y compleja de todo el proyecto y no mejora la enseñanza (el valor pedagógico está en las respuestas, no en que mueva la boca). Queda como posible mejora premium a futuro, solo si el negocio ya funciona. Las ilustraciones pueden usar una foto del profesor como modelo/molde, con dos condiciones: (a) **estilización clara** — deben leerse como personaje ilustrado, no como retrato fotorrealista del profesor, para que ningún alumno o padre crea que chatea con el profesor humano real; (b) **[RESUELTO 11/07]** solo **Maestro Allegro (Piano)** se basa en el profesor (la foto que pasó como modelo); los otros tres son **personajes propios, completamente distintos**.
+
+**Reparto de los 4 tutores (decidido 11/07):**
+
+| Aula | Tutor | Género | Base visual |
+|---|---|---|---|
+| Piano | Maestro Allegro | Hombre | Basado en el profesor (foto modelo), estilizado como personaje |
+| Guitarra | Maestro Ritmo | Hombre | Personaje propio, distinto del profesor |
+| Canto | Maestra Resonancia | Mujer | Personaje propio |
+| Teoría Musical | Profesor(a) Harmónico | Mujer | Personaje propio |
+
+- **2 hombres (Piano, Guitarra) y 2 mujeres (Canto, Teoría Musical).**
+- **Diversidad explícita:** los cuatro deben variar entre sí en tono de piel, rasgos y descendencia — NO cuatro personas rubias de ojos claros. La idea es que distintos alumnos puedan verse reflejados en distintos maestros. Solo Allegro hereda la fisonomía del profesor; los otros tres se diseñan buscando esa variedad.
+- Nota: "Profesor Harmónico" figura con nombre masculino en versiones anteriores del doc; con esta decisión el tutor de Teoría es mujer — ajustar el nombre/artículo del personaje cuando se defina (ej. "Profesora Harmónica" o un nombre nuevo) antes de generar la ilustración.
+
+**Regla explícita de diseño — NO optimizar para consumo de mensajes.** Se evaluó y se descartó diseñar al tutor para generar más diálogo con el objetivo de que el alumno consuma más mensajes de su bolsa mensual. Hay una diferencia real entre "el tutor motiva genuinamente y de paso consume más mensajes como efecto secundario" (aceptable, es el mismo efecto que el recordatorio de racha de Duolingo) y "diseñar al tutor para que hable de más a propósito, para vaciarle la bolsa de mensajes al alumno" (patrón oscuro, descartado). Los puntos 1 a 6 de arriba se construyen porque son buena pedagogía — no se ajustan ni se miden para maximizar mensajes consumidos. Si de rebote el uso sube por una motivación genuina, bienvenido, pero nunca es el objetivo de diseño.
+
 ## Herramientas técnicas mencionadas en tu diseño (confirmadas como reales y vigentes)
 - **AlphaTab / OSMD**: renderizado de partituras/tablaturas interactivas en la web — existen y son opciones válidas, Claude Code puede evaluar cuál se ajusta mejor.
 - **Web Audio API + sintetizador**: para generar dictados/arpegios en tiempo real sin archivos de audio pregrabados — viable, y es el mismo motor que ya recomendamos para los ejercicios `[DIGITAL-INTERACTIVO]` de los `curriculum.md`.

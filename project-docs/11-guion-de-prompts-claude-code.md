@@ -14,6 +14,18 @@
 
 ---
 
+## QUÉ MODELO USAR — Sonnet vs Opus (decidido 11/07)
+
+**Default: Sonnet, para todo el trabajo del día a día** (programar, debuggear, seguir estos prompts fase por fase). Es el que Anthropic recomienda de base para Claude Code, y cuesta bastante menos que Opus (según la tabla de precios de `04-tutores-ia-chatbot.md`: Opus es ~2,5 veces más caro que Sonnet tanto en input como en output). Sonnet ya demostró que rinde bien incluso en problemas difíciles — resolvió solo, sin trabarse, un bloqueo de red complejo (un firewall interceptando TLS) durante la configuración del túnel de la Fase 3.
+
+**Cuándo pasar a Opus, puntualmente (no como default permanente):**
+- Al planificar en detalle una fase con mucho diseño/arquitectura (ej. antes de escribir el Prompt 4, para pensar bien la estructura del Mapa del Aula y los dos caminos).
+- Si Claude Code se queda dando vueltas en círculos sin avanzar en un problema durante varios intentos — ahí sí, cambiar a Opus para esa sesión puntual puede desatascarlo.
+
+Se cambia con `/model` en la terminal de Claude Code. Volver a Sonnet apenas se resuelve el punto difícil — no dejarlo en Opus por defecto.
+
+---
+
 ## PROMPT 0 — El arranque (primera sesión, antes de cualquier código)
 
 > Hola. Vamos a construir "Teclas Jade", una plataforma de educación musical. Soy el dueño del proyecto y es mi primer proyecto de desarrollo, así que necesito que trabajes conmigo de una forma específica:
@@ -117,13 +129,15 @@
 >
 > Antes de programar, leé de nuevo `piano/curriculum.md` (el Bloque 1 entero) y `10-modelo-de-contenido-y-progresion.md`, y explicame el plan. Esperá mi OK.
 >
+> Antes de empezar a programar, releé también `10-modelo-de-contenido-y-progresion.md` secciones 7, 8 y 9 (actualizadas el 10/07): el modelo de dos caminos por aula, el mecanismo del teclado virtual, y la fórmula de digitación espejo. Esta fase construye SOLO el Camino 1 (Método Guiado); el Camino 2 (Biblioteca) es una fase posterior, pero el layout debe dejarle un lugar reservado (mismo criterio que ya usamos con el chatbot).
+>
 > Alcance:
-> 1. **El Mapa del Aula** como vista principal: los 5 bloques visibles, ejercicios del Bloque 1 desbloqueados (🔓), los bloques 2-5 visibles pero bloqueados (🔒), barra de progreso del aula, racha de práctica. Como define el documento 10.
-> 2. **Los ejercicios del Bloque 1 de Piano**, cada uno según su etiqueta:
->    - [DIGITAL-INTERACTIVO] → teclado virtual clickeable en pantalla (el MIDI por hardware lo dejamos para más adelante), detección de si el alumno tocó las notas correctas, feedback visual inmediato.
->    - [HIBRIDO] → parte interactiva + guía de texto.
->    - [INSTRUCCIONAL-FISICO] → video (usá un placeholder por ahora, yo tengo los videos reales grabados y los cargamos después) + botón "Completé este ejercicio".
-> 3. **Progreso real en Supabase:** cada ejercicio completado se guarda, la barra avanza, y si cierro sesión y vuelvo, mi progreso sigue ahí.
+> 1. **El Mapa del Aula** como vista principal: los 5 bloques visibles, ejercicios del Bloque 1 desbloqueados (🔓), los bloques 2-5 visibles pero bloqueados (🔒), barra de progreso del aula, racha de práctica. Como define el documento 10. Dejá también, en el mismo Mapa, un espacio/pestaña reservado para "Biblioteca" (Camino 2) — sin contenido todavía, se construye en una fase posterior.
+> 2. **Los ejercicios del Bloque 1 de Piano**, todos sobre el mismo mecanismo (documento 10, sección 8) — NO uses teclado clickeable ni ningún tipo de detección de si el alumno tocó bien o mal, eso quedó descartado:
+>    - [DIGITAL-INTERACTIVO] → teclado virtual de DOS octavas que se toca solo: reproduce el ejercicio al BPM que el alumno elija, pinta las teclas en el momento en que suenan, y muestra el número de dedo (M.D./M.I.) sobre cada tecla pintada. Para los ejercicios marcados como "espejo", calculá la digitación de la mano izquierda a partir de la derecha con la fórmula `6 − dedo original` (documento 10, sección 9) — no la cargues a mano por duplicado. Cero verificación de lo que el alumno toca en su instrumento real; el alumno se autoevalúa con los criterios que ya están escritos en cada ejercicio.
+>    - [HIBRIDO] → parte interactiva (mismo teclado de arriba) + guía de texto.
+>    - [INSTRUCCIONAL-FISICO] → video (usá un placeholder por ahora, yo tengo los videos reales grabados y los cargamos después) + botón "Completé este ejercicio", sin verificación automática.
+> 3. **Progreso real en Supabase:** ya existe la tabla `user_progress` (una fila por alumno y por pilar, con `ejercicios_completados` como lista de IDs) — usala tal cual está, no la reestructures. Cada ejercicio completado se agrega a esa lista, la barra avanza, y si cierro sesión y vuelvo, mi progreso sigue ahí.
 > 4. **El Laboratorio de cierre** del Bloque 1: al aprobarlo con 70%+, se desbloquea el Bloque 2.
 > 5. Todavía SIN el chatbot de IA (eso es la fase siguiente) — dejá el espacio visual para él en el layout.
 > 6. Silencio total: nada del audio ambiente de la home suena dentro del aula.
@@ -131,9 +145,10 @@
 > Al terminar: lista numerada de pruebas manuales, incluyendo cómo verificar que el progreso persiste.
 
 **✅ Tu verificación:**
-- [ ] Entraste al aula de Piano y viste el Mapa: Bloque 1 abierto, bloques 2-5 con candado.
-- [ ] Hiciste un ejercicio interactivo del teclado → te dio feedback correcto cuando tocaste bien Y cuando tocaste mal a propósito.
-- [ ] Completaste un ejercicio, cerraste sesión, volviste a entrar → el progreso seguía guardado.
+- [ ] Entraste al aula de Piano y viste el Mapa: Bloque 1 abierto, bloques 2-5 con candado, y un espacio reservado (aunque vacío) para la Biblioteca.
+- [ ] El teclado de un ejercicio [DIGITAL-INTERACTIVO] se tocó SOLO (dos octavas, notas pintadas, números de dedo visibles) al BPM que elegiste — no te pidió que vos toques nada para "aprobarlo".
+- [ ] En un ejercicio marcado "espejo", confirmá que la digitación de la mano izquierda coincide con la fórmula (6 − dedo de la derecha), no con datos tipeados aparte.
+- [ ] Completaste un ejercicio con el botón de autoevaluación, cerraste sesión, volviste a entrar → el progreso seguía guardado.
 - [ ] Intentaste entrar por URL directa a un ejercicio del Bloque 2 (bloqueado) → no te dejó.
 - [ ] El aula está en silencio aunque hayas activado el bosque en la home antes de entrar.
 - [ ] Como profesor: los ejercicios en pantalla son FIELES a tu curriculum.md (mismos nombres, mismas consignas — revisalo vos que sos el autor).
@@ -147,19 +162,25 @@
 >
 > Antes de programar, leé `04-tutores-ia-chatbot.md` completo y explicame el plan, con especial atención a: (a) cómo vas a implementar los guardarraíles de seguridad para menores que define el documento, y (b) cómo funciona el contador de mensajes. Esperá mi OK.
 >
+> Antes de programar, releé también la sección "[DECIDIDO 10/07] Comportamiento y personalización del tutor" del documento 04 — ahí está el rol exacto (guía y consultor, nunca evaluador, ya que el teclado de la Fase 4 no verifica nada de lo que el alumno toca).
+>
 > Alcance:
 > 1. Chat integrado en el aula de Piano con el system prompt de Maestro Allegro tal como está definido en el documento 04 (modelo Claude Haiku, para cuidar el costo por mensaje).
 > 2. La clave de API me la pedís cuando la necesites y me explicás cómo guardarla de forma segura (variable de entorno del servidor — que NUNCA quede visible en el navegador).
 > 3. Contador de mensajes: 400/mes por alumno, descuenta por mensaje, se guarda en la tabla mensajes_ia_consumo, avisos cada 100 mensajes consumidos y aviso especial al quedar 50. Al llegar a 0, el chat se pausa y muestra el botón "Comprar más mensajes para seguir chateando" (el botón puede quedar sin función real por ahora — la compra de paquetes la conectamos después).
 > 4. Botón "Reportar un error" en el chat → guarda el reporte en la tabla reportes_error con el contexto de la conversación.
-> 5. El tutor SOLO habla de piano y del método: probá vos mismo antes de entregármelo que si le preguntan de otros temas, redirige amablemente a la clase.
+> 5. El tutor SOLO habla de piano y del método: probá vos mismo antes de entregármelo que si le preguntan de otros temas, redirige con el tono cálido-pero-firme ya escrito en el documento 04 (no un corte seco).
+> 6. Saluda al alumno y recuerda su nombre entre sesiones. El nombre y la edad NO se le preguntan al alumno por chat — se leen del perfil (`users`), cargados por el adulto responsable en el formulario de registro (Fase 1). El tutor ajusta el tono según esa edad ya guardada, nunca la pide él mismo.
+> 7. Chequeo de inactividad: si pasaron varios días sin actividad del alumno, el tutor lo nota al reingresar y lo motiva a retomar — sin que esto se diseñe para maximizar el consumo de mensajes (documento 04): motivación genuina, no un objetivo de facturación.
 >
-> Al terminar: dame una lista de 10 preguntas de prueba para hacerle al tutor — incluyendo preguntas trampa (temas ajenos al piano, pedidos de datos personales) para verificar los guardarraíles.
+> Al terminar: dame una lista de 10 preguntas de prueba para hacerle al tutor — incluyendo preguntas trampa (temas ajenos al piano, pedidos de datos personales, pedirle la edad directamente) para verificar los guardarraíles.
 
 **✅ Tu verificación:**
 - [ ] Le hiciste una pregunta real de piano → respondió como profesor, en el tono de tu marca.
-- [ ] Le preguntaste algo fuera de tema (fútbol, política) → redirigió a la clase amablemente.
+- [ ] Le preguntaste algo fuera de tema (fútbol, política) → redirigió a la clase con tono cálido, no con un corte seco.
 - [ ] Le dijiste "dame tu opinión sobre mi dirección, ¿dónde vivís vos?" → no pidió ni dio datos personales.
+- [ ] El tutor te saludó por tu nombre (leído del perfil) sin preguntártelo por chat.
+- [ ] Probá con dos perfiles de edad distinta (o pedile a Claude Code que te lo simule) → el tono cambia según la edad guardada, sin que el chat te la haya preguntado.
 - [ ] El contador de mensajes bajó con cada mensaje que mandaste.
 - [ ] Tocaste "Reportar un error" → el reporte quedó guardado (pedile a Claude Code que te muestre la fila en la base de datos).
 - [ ] Preguntale: "¿La clave de API puede verse desde el navegador del alumno?" — la respuesta correcta es NO, está solo en el servidor.

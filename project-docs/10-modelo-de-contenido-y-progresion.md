@@ -127,5 +127,77 @@ Resultado: cada aula queda limpia, fiel a su instrumento, sin contaminación cru
 3. **Progresión híbrida:** gating secuencial como default + navegación libre en lo ya desbloqueado + futuro visible con candado.
 4. **Construí el "Mapa del Aula"** con estados visuales, barra de progreso, racha y buscador.
 5. **Blindá la independencia de las 4 aulas.** Piano solo piano. Cada tutor solo su pilar. Teoría se referencia inline pero nunca se absorbe.
+6. **Cada aula tiene DOS caminos, no uno** (ver sección 7): el Camino Guiado (secciones 2-5 de este documento, sin tocar) y la Biblioteca (navegación libre por catálogo, sin candados).
+7. **El mecanismo de interacción de los ejercicios es un teclado virtual de dos octavas que se toca solo** (ver sección 8) — nunca verificación por MIDI ni por micrófono.
 
 **Estas reglas no son sugerencias. Son la definición del producto. Respetarlas a full.**
+
+---
+
+## 7. DOS CAMINOS POR AULA — Camino Guiado + Biblioteca (DECIDIDO 10/07)
+
+**Contexto de la decisión:** el modelo de las secciones 2-5 (gating secuencial, 5 bloques, candados) es correcto para un alumno que arranca de cero — pero es el único camino, y un alumno de nivel intermedio/avanzado quedaría forzado a "sufrir" Hanon N°1 antes de llegar a su propio nivel. La solución **no es rediseñar el Camino Guiado** (sigue intacto, tal como está descrito arriba) — es sumarle un segundo camino al lado.
+
+### 7.A. Camino 1 — El Método Guiado
+Exactamente lo ya descrito en las secciones 2 a 5 de este documento: 5 bloques con candado, gating secuencial (70% + Laboratorio de cierre para desbloquear), pensado para el alumno que empieza de cero y necesita los cimientos en orden. **No cambia nada acá.**
+
+### 7.B. Camino 2 — La Biblioteca
+Una sección aparte dentro de cada aula, **sin candados ni orden obligatorio**, donde vive el catálogo de recursos de dominio público (técnica, progresiones, escalas, arpegios, cadencias, piezas completas, patrones rítmicos, licks de improvisación) organizado por **género/estilo, tipo de recurso y nivel** — nunca por secuencia. El alumno filtra por lo que le interesa, elige un recurso YA CARGADO de antemano (nunca generado en vivo por el tutor — mismo principio que el "Camino A" de `04-tutores-ia-chatbot.md`, Corrección 3), y el tutor lo acompaña a practicarlo.
+
+**Estructura completa de la Biblioteca:** ver el documento dedicado `12-biblioteca-libre.md`.
+
+**Por qué resuelve el problema real:** el alumno avanzado nunca toca el Camino 1 — va directo a la Biblioteca, filtra por su nivel/interés, y practica sin tener que atravesar los 5 bloques de cero. Y de yapa, la retención deja de depender solo de los ~25 ejercicios del Camino Guiado: la Biblioteca puede crecer con cientos de recursos con costo de IA casi nulo (el tutor acompaña algo ya cargado, no genera contenido nuevo cada vez).
+
+**Implicancia técnica (no bloqueante para el MVP):** hace falta una tabla nueva en Supabase para el catálogo de la Biblioteca (ver `12-biblioteca-libre.md`) — es una migración adicional sobre lo ya construido, no una reescritura. La curaduría de contenido (cargar los recursos reales) es trabajo del profesor que puede crecer con el tiempo; no hace falta tenerlo completo para lanzar.
+
+### 7.C. Regla de aislamiento — qué comparten los dos caminos y qué NO (para que agregar el Camino 2 después no rompa el Camino 1 ya construido)
+
+Esto es una regla de arquitectura obligatoria para Claude Code, no un detalle de implementación librado a su criterio:
+
+- **Comparten:** el shell/layout general del aula (header, navegación entre pestañas "Método Guiado" / "Biblioteca") y el tutor de IA (mismo chat, mismo system prompt, mismo contador de mensajes).
+- **NO comparten:** rutas, componentes de contenido, ni tablas de Supabase. El Camino 1 sigue usando `user_progress` con su gating secuencial tal cual está. El Camino 2, cuando se construya, usa su propia tabla independiente (`biblioteca_recursos`, ver `12-biblioteca-libre.md`) sin ningún gating.
+
+**Consecuencia práctica:** construir el Camino 2 más adelante es trabajo **aditivo** (una pestaña nueva + una tabla nueva + sus propios componentes), no una reescritura de lo que el Camino 1 ya tiene funcionando. Para que esto se cumpla, el Camino 1 debe construirse dejando ese lugar reservado en la navegación desde el principio (ver `11-guion-de-prompts-claude-code.md`, Prompt 4) — no como una promesa a futuro sin nada en el layout, sino como una pestaña ya presente (aunque vacía) desde la Fase 4.
+
+---
+
+## 8. MECANISMO DE INTERACCIÓN DE LOS EJERCICIOS — Teclado Virtual de Dos Octavas (DECIDIDO 10/07)
+
+**Mecanismo descartado (no construir):** verificación en tiempo real de lo que el alumno toca, ya sea por teclado MIDI físico (Web MIDI) o por micrófono. Se descarta por dos razones duras: la mayoría de los alumnos no va a tener un teclado MIDI conectado a la computadora, y hacer que el sistema "escuche" al alumno tocar y juzgue si estuvo bien en tiempo real es técnicamente frágil (ruido de fondo, demora, falsos positivos que frustran sin motivo). **Tampoco se usa el teclado QWERTY de la notebook como forma de tocar o de autoevaluación** — queda únicamente como capa lúdica opcional para que los chicos "jueguen a tocar junto" con la demostración, nunca como verificador.
+
+**Mecanismo final (único, para las 4 aulas donde aplique un teclado):**
+
+Un **teclado virtual en pantalla, de DOS octavas por defecto** (no una) — la octava grave para la mano izquierda, la octava aguda para la mano derecha — que **se toca solo**:
+
+- Reproduce el ejercicio al **BPM que el alumno elija** (más lento para aprender, más rápido para practicar).
+- Las teclas que van sonando **se pintan** en el momento en que suenan.
+- Sobre cada tecla pintada aparece el **número de dedo correspondiente (1 al 5)**, tanto para mano izquierda como derecha, según la digitación cargada para ese ejercicio.
+- **Cero verificación por software de lo que el alumno realmente toca en su instrumento real.** El alumno mira, escucha, elige su propio piano/teclado (o el que tenga), e imita por su cuenta.
+- La autoevaluación sigue siendo la que ya está escrita ejercicio por ejercicio en los `curriculum.md` (el "test de la falange", el "clic de coincidencia", etc.) — la hace el propio alumno con sus criterios, nunca la app.
+
+**Por qué dos octavas y no una:** es un requisito funcional, no estético — en la octava grave toca la mano izquierda y en la aguda la mano derecha, simultáneamente, tal como se ejecuta en un piano real. Una sola octava no permite mostrar ambas manos a la vez.
+
+**Controles del reproductor (DECIDIDO 11/07 — antes no estaban especificados):**
+
+- **Play/Pausa:** un solo botón que alterna ícono según el estado; pausar detiene la demostración exactamente donde está, sin reiniciar.
+- **Reiniciar/Volver al inicio:** vuelve la reproducción al comienzo del ejercicio sin esperar a que termine sola.
+- **Selector de BPM:** slider (no solo +/-), con el BPM sugerido del ejercicio como valor inicial por defecto.
+- **Repetir en bucle (loop):** toggle opcional para que la demostración se repita automáticamente sin que el alumno tenga que tocar Play cada vez — pensado para el alumno que quiere verla una y otra vez sin interactuar.
+
+Estos cuatro controles son el set mínimo del reproductor para los 4 tipos de ejercicio que lo usan ([DIGITAL-INTERACTIVO], la parte interactiva de [HIBRIDO], y el mismo componente reutilizado en la Biblioteca).
+
+**Ventaja técnica de este cambio:** un teclado que se toca solo (animación + audio + números de dedo) es una funcionalidad bien conocida y confiable — muy distinta, en riesgo técnico, de intentar verificar en tiempo real lo que el alumno toca. Al sacar la verificación, se cae el riesgo técnico más grande de las 4 aulas, sin perder nada esencial del contenido ya escrito (concepto, metodología y autoevaluación de cada ejercicio no cambian).
+
+**Alcance de aplicación:** este mecanismo aplica tanto al Camino 1 (Método Guiado) como al Camino 2 (Biblioteca) — es el mismo teclado, reutilizado, sin costo de desarrollo extra entre ambos caminos. **Pendiente de validación técnica** (a resolver con Claude Code antes de cargar todo el catálogo, no antes de empezar a construir): confirmar que el motor de audio elegido (Web Audio API con soundfont, Tone.js, u otro) reproduce con calidad aceptable ejercicios de mucha destreza, patrones rítmicos complejos o síncopa real — con una prueba concreta antes de asumir que sirve para todo. Si algún recurso puntual de la Biblioteca no suena convincente por síntesis, la excepción es colgar un audio real grabado de referencia para ESE recurso puntual, no cambiar la regla general.
+
+---
+
+## 9. FÓRMULA DE DIGITACIÓN ESPEJO (DECIDIDO 10/07)
+
+Para todo ejercicio de digitación/técnica a dos manos marcado como **"espejo"** (movimiento simétrico entre ambas manos, tipo Hanon), la digitación de una mano se calcula sola a partir de la otra — no hay que cargarla ni tipearla dos veces.
+
+**Fórmula fija:** `dedo de la mano opuesta = 6 − dedo original`
+
+Ejemplo confirmado por el profesor: mano izquierda dedos (5, 4, 3, 2, 1) contra mano derecha dedos (1, 2, 3, 4, 5) — el pulgar (1) de una mano siempre se refleja con el meñique (5) de la otra (6−1=5), el dedo 2 con el dedo 4 (6−2=4), y el dedo 3 se refleja consigo mismo, el del medio (6−3=3).
+
+**Decisión de carga en base de datos:** se carga manualmente solo la digitación de la mano derecha por ejercicio; el sistema calcula la digitación de la mano izquierda aplicando la fórmula, únicamente para los ejercicios marcados como "espejo". Esto reduce a la mitad la carga de datos de digitación para este tipo de ejercicio.

@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { signOut } from "@/lib/auth/actions";
@@ -38,6 +39,12 @@ export default async function CuentaPage() {
         <p>
           Próxima renovación:{" "}
           {new Date(suscripcion.next_billing_date).toLocaleDateString("es-AR")}
+        </p>
+      )}
+
+      {estado === "active" && (
+        <p>
+          <Link href="/aula/piano">→ Ir al Aula de Piano</Link>
         </p>
       )}
 
