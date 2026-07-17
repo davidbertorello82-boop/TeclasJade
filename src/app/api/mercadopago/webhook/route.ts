@@ -56,7 +56,24 @@ export async function POST(request: NextRequest) {
   // API de Mercado Pago cual es el estado real de esta suscripcion.
   const cliente = crearClienteMercadoPago();
   const preApproval = new PreApproval(cliente);
-  const suscripcion = await preApproval.get({ id: dataId });
+
+  let suscripcion;
+  try {
+    suscripcion = await preApproval.get({ id: dataId });
+  } catch (error) {
+    // Fallo (posiblemente transitorio) al consultar la API de Mercado Pago.
+    // Respondemos 500 a proposito para que Mercado Pago reintente la
+    // notificacion, y no escribimos nada en Supabase sin el estado real.
+    console.error(
+      "No se pudo consultar la PreApproval en Mercado Pago:",
+      dataId,
+      error,
+    );
+    return NextResponse.json(
+      { error: "Error consultando Mercado Pago." },
+      { status: 500 },
+    );
+  }
 
   const userId = suscripcion.external_reference;
   if (!userId) {
