@@ -1,6 +1,7 @@
 import "server-only";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
+import { reconciliarSuscripcion } from "@/lib/mercadopago/reconciliar";
 
 // Guardia reutilizable para las rutas premium (aulas, a partir de la Fase 4).
 // Llamarla al principio de un Server Component: si no hay sesion, manda a
@@ -23,7 +24,14 @@ export async function requireActiveSubscription() {
     .eq("user_id", user.id)
     .maybeSingle();
 
-  if (suscripcion?.status !== "active") {
+  // Reconciliación lazy: si quedó "pending" (p. ej. el webhook no llegó tras el
+  // checkout), consultamos el estado real en Mercado Pago antes de decidir.
+  let estado = suscripcion?.status ?? "inactive";
+  if (estado === "pending") {
+    estado = await reconciliarSuscripcion(user.id);
+  }
+
+  if (estado !== "active") {
     redirect("/suscripcion/requerida");
   }
 

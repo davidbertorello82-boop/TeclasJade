@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
+import { reconciliarSuscripcion } from "@/lib/mercadopago/reconciliar";
 import { signOut } from "@/lib/auth/actions";
 
 const ETIQUETAS_ESTADO: Record<string, string> = {
@@ -26,7 +27,21 @@ export default async function CuentaPage() {
     .eq("user_id", user.id)
     .maybeSingle();
 
-  const estado = suscripcion?.status ?? "inactive";
+  let estado = suscripcion?.status ?? "inactive";
+  let nextBillingDate = suscripcion?.next_billing_date ?? null;
+
+  // Reconciliación lazy: si está "pending", consultamos Mercado Pago y releemos
+  // la fila para mostrar el estado y la fecha ya actualizados.
+  if (estado === "pending") {
+    await reconciliarSuscripcion(user.id);
+    const { data: refrescada } = await supabase
+      .from("subscriptions")
+      .select("status, next_billing_date")
+      .eq("user_id", user.id)
+      .maybeSingle();
+    estado = refrescada?.status ?? estado;
+    nextBillingDate = refrescada?.next_billing_date ?? nextBillingDate;
+  }
 
   return (
     <main style={{ maxWidth: 360, margin: "4rem auto", padding: "0 1rem" }}>
@@ -35,10 +50,10 @@ export default async function CuentaPage() {
 
       <h2>Suscripción</h2>
       <p>Estado: {ETIQUETAS_ESTADO[estado] ?? estado}</p>
-      {suscripcion?.next_billing_date && estado === "active" && (
+      {nextBillingDate && estado === "active" && (
         <p>
           Próxima renovación:{" "}
-          {new Date(suscripcion.next_billing_date).toLocaleDateString("es-AR")}
+          {new Date(nextBillingDate).toLocaleDateString("es-AR")}
         </p>
       )}
 
