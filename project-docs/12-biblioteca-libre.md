@@ -11,7 +11,7 @@
 
 El Camino Guiado (5 bloques con candado) es correcto para quien empieza de cero, pero deja sin resolver al alumno de nivel medio/avanzado, que no debería tener que atravesar los cimientos para llegar a su propio nivel. La Biblioteca es la respuesta: un catálogo navegable libremente, organizado por lo que el alumno quiere aprender, no por una secuencia obligatoria.
 
-**Principio central, ya blindado en `04-tutores-ia-chatbot.md` (Corrección 3):** todo recurso de la Biblioteca está **codificado de antemano** (nunca generado en vivo por el tutor al momento de pedirlo). El tutor acompaña un recurso ya cargado; no lo inventa.
+**Principio central, ya blindado en `04-tutores-ia-chatbot.md` (Corrección 3):** todo recurso de la Biblioteca está **codificado de antemano** (nunca generado en vivo por IA al momento de pedirlo). En el Camino 2 el acompañamiento es la **demostración del teclado autotocable** (§5), no el chat conversacional: el **chat con el tutor de IA es exclusivo del Camino 1** (ver `10-modelo-de-contenido-y-progresion.md` §7). El recurso ya cargado se practica; no se inventa.
 
 ---
 
@@ -53,11 +53,25 @@ Aunque un concepto "sea el mismo" en dos instrumentos (ej. un ii-V-I existe tant
 
 ---
 
-## 5. Mecanismo de demostración — reutiliza el teclado, con una validación técnica pendiente
+## 5. Mecanismo de demostración — reutiliza el teclado de rango dinámico, con una validación técnica pendiente
 
-La demostración de cada recurso de Piano usa el **mismo teclado virtual de dos octavas que se toca solo** ya cerrado para el Camino Guiado (`10-modelo-de-contenido-y-progresion.md`, sección 8) — mismo audio, mismos números de dedo, misma velocidad ajustable. Sin costo de desarrollo extra: es tecnología reutilizada, no una nueva.
+La demostración de cada recurso **reproducible** de Piano usa el **mismo teclado virtual de rango dinámico que se toca solo** ya cerrado para el Camino Guiado (`10-modelo-de-contenido-y-progresion.md`, secciones 8 y 10) — mismo audio, mismos números de dedo, misma velocidad ajustable, y el rango de octavas se ajusta solo a cada recurso a partir de su secuencia de notas. Sin costo de desarrollo extra: es tecnología reutilizada, no una nueva.
 
 **[Probable] Pendiente de validar con Claude Code, antes de cargar el catálogo completo (no antes de empezar a construir):** confirmar con una prueba concreta (un patrón rítmico complejo de muestra) si el motor de audio elegido sostiene calidad aceptable para TODOS los recursos — hay recursos de mucha destreza o ritmo complejo donde la síntesis podría sonar poco convincente. Si algún recurso puntual falla esa prueba, la excepción es colgar un audio real grabado de referencia para ESE recurso específico — síntesis por defecto, grabación real solo donde haga falta. No es una excusa para no construir el mecanismo por defecto; es una validación puntual antes de dar por buena la cobertura al 100%.
+
+---
+
+## 5.B. DOS TIPOS DE CONTENIDO: REPRODUCIBLE vs VISUAL (DECIDIDO 11/07)
+
+> ⚠️ **REPASAR ANTES DE EJECUTAR.** Esta distinción se relee y reconfirma con el profesor antes de programar el modelo de contenido de la Biblioteca. Es la columna vertebral de cómo se carga el material masivo. Espejo de la sección 11 del doc 10.
+
+El motor no puede reproducir un ritmo que no está en el dato: la etiqueta de género no le dice al reproductor cómo suena. Por eso **cada recurso de la Biblioteca se marca como uno de dos tipos:**
+
+**Tipo 1 — REPRODUCIBLE (curaduría en texto):** lo toca el motor (teclado auto / AlphaTab). Requiere altura **+ duración (ritmo)** cargada nota por nota, o una partitura conseguida como **MusicXML** (archivo musical, no imagen — el motor lo lee directo). Reservado para donde el audio realmente enseña.
+
+**Tipo 2 — VISUAL (curaduría de imágenes):** imagen de partitura / tablatura / acordes, estática. El motor NO la toca; **el ritmo vive en la imagen y lo lee el alumno.** Cero duración que cargar. **Es el grueso del material masivo de los 6-7 géneros** — el volumen enorme de la Biblioteca cae acá, en la categoría que no pide encodeo rítmico.
+
+**⚠️ Regla de copyright (misma que doc 10 §1 y doc 05):** material ajeno conseguido —imagen O MusicXML de una obra con derechos vigentes— NO se sube tal cual a un sitio pago. Inspiración para originales del profesor, o licencia. Cruza siempre con `05-clasificacion-derechos-autor-libros.md` (el campo "Fuente" de la sección 2 existe justo para esto).
 
 ---
 

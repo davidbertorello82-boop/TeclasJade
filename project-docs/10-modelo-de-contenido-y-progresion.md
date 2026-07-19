@@ -142,7 +142,7 @@ Resultado: cada aula queda limpia, fiel a su instrumento, sin contaminación cru
 Exactamente lo ya descrito en las secciones 2 a 5 de este documento: 5 bloques con candado, gating secuencial (70% + Laboratorio de cierre para desbloquear), pensado para el alumno que empieza de cero y necesita los cimientos en orden. **No cambia nada acá.**
 
 ### 7.B. Camino 2 — La Biblioteca
-Una sección aparte dentro de cada aula, **sin candados ni orden obligatorio**, donde vive el catálogo de recursos de dominio público (técnica, progresiones, escalas, arpegios, cadencias, piezas completas, patrones rítmicos, licks de improvisación) organizado por **género/estilo, tipo de recurso y nivel** — nunca por secuencia. El alumno filtra por lo que le interesa, elige un recurso YA CARGADO de antemano (nunca generado en vivo por el tutor — mismo principio que el "Camino A" de `04-tutores-ia-chatbot.md`, Corrección 3), y el tutor lo acompaña a practicarlo.
+Una sección aparte dentro de cada aula, **sin candados ni orden obligatorio**, donde vive el catálogo de recursos de dominio público (técnica, progresiones, escalas, arpegios, cadencias, piezas completas, patrones rítmicos, licks de improvisación) organizado por **género/estilo, tipo de recurso y nivel** — nunca por secuencia. El alumno filtra por lo que le interesa, elige un recurso YA CARGADO de antemano (nunca generado en vivo por el tutor — mismo principio que el "Camino A" de `04-tutores-ia-chatbot.md`, Corrección 3), y la práctica se apoya en la demostración del teclado autotocable (§8), reutilizada acá. El chat conversacional con el tutor de IA no está disponible en el Camino 2: es exclusivo del Camino 1.
 
 **Estructura completa de la Biblioteca:** ver el documento dedicado `12-biblioteca-libre.md`.
 
@@ -154,8 +154,8 @@ Una sección aparte dentro de cada aula, **sin candados ni orden obligatorio**, 
 
 Esto es una regla de arquitectura obligatoria para Claude Code, no un detalle de implementación librado a su criterio:
 
-- **Comparten:** el shell/layout general del aula (header, navegación entre pestañas "Método Guiado" / "Biblioteca") y el tutor de IA (mismo chat, mismo system prompt, mismo contador de mensajes).
-- **NO comparten:** rutas, componentes de contenido, ni tablas de Supabase. El Camino 1 sigue usando `user_progress` con su gating secuencial tal cual está. El Camino 2, cuando se construya, usa su propia tabla independiente (`biblioteca_recursos`, ver `12-biblioteca-libre.md`) sin ningún gating.
+- **Comparten:** el shell/layout general del aula (header, navegación entre pestañas "Método Guiado" / "Biblioteca") y el componente de demostración del teclado autotocable (§8).
+- **NO comparten:** rutas, componentes de contenido, tablas de Supabase, ni el chat conversacional del tutor de IA: ese chat (y su contador de mensajes) es exclusivo del Camino 1. El Camino 1 sigue usando `user_progress` con su gating secuencial tal cual está. El Camino 2, cuando se construya, usa su propia tabla independiente (`biblioteca_recursos`, ver `12-biblioteca-libre.md`) sin ningún gating y sin chat de tutor.
 
 **Consecuencia práctica:** construir el Camino 2 más adelante es trabajo **aditivo** (una pestaña nueva + una tabla nueva + sus propios componentes), no una reescritura de lo que el Camino 1 ya tiene funcionando. Para que esto se cumpla, el Camino 1 debe construirse dejando ese lugar reservado en la navegación desde el principio (ver `11-guion-de-prompts-claude-code.md`, Prompt 4) — no como una promesa a futuro sin nada en el layout, sino como una pestaña ya presente (aunque vacía) desde la Fase 4.
 
@@ -201,3 +201,49 @@ Para todo ejercicio de digitación/técnica a dos manos marcado como **"espejo"*
 Ejemplo confirmado por el profesor: mano izquierda dedos (5, 4, 3, 2, 1) contra mano derecha dedos (1, 2, 3, 4, 5) — el pulgar (1) de una mano siempre se refleja con el meñique (5) de la otra (6−1=5), el dedo 2 con el dedo 4 (6−2=4), y el dedo 3 se refleja consigo mismo, el del medio (6−3=3).
 
 **Decisión de carga en base de datos:** se carga manualmente solo la digitación de la mano derecha por ejercicio; el sistema calcula la digitación de la mano izquierda aplicando la fórmula, únicamente para los ejercicios marcados como "espejo". Esto reduce a la mitad la carga de datos de digitación para este tipo de ejercicio.
+
+---
+
+## 10. TECLADO DE RANGO DINÁMICO (DECIDIDO 11/07)
+
+> ⚠️ **REPASAR ANTES DE EJECUTAR.** Esta sección (10) y la (11) se releen y reconfirman con el profesor ANTES de que Claude Code las programe. No arrancar el build del Bloque 2 sin ese repaso previo. Énfasis pedido por el profesor.
+
+**Problema detectado:** un teclado fijo de 2 octavas se queda corto. Con las 2 octavas repartidas una por mano, una escala de octava completa en una mano necesita la 8ª nota que ya cae en la octava de la otra mano — se pisan.
+
+**Decisión — rango dinámico, NO número fijo:**
+
+- El teclado renderiza **las octavas que necesita cada ejercicio**, calculadas automáticamente a partir de su propia secuencia de notas (la nota más grave y la más aguda del ejercicio determinan cuántas octavas se dibujan).
+- **Mínimo 2 octavas** (para que ejercicios cortos no se vean ridículos).
+- **Sin configuración por ejercicio, cero código extra:** las octavas se derivan de la misma secuencia de notas que ya hace que el teclado se toque solo. El profesor carga las notas una sola vez; el rango sale solo de ahí. No hay un segundo dato que mantener ni forma de que se desincronice.
+- Ventaja de escala: da igual si son 20 ejercicios o miles de recursos de Biblioteca — mientras cada uno tenga su secuencia, el teclado se ajusta solo. Más material no agrega trabajo de configuración de teclado.
+
+**Regla de escritorio / celular:**
+
+- Pantallas anchas: el teclado se ve completo.
+- Celular vertical, cuando el ejercicio supera 2 octavas: mostrar un ícono de "girar el teléfono" y desplegar completo en horizontal.
+- Respaldo silencioso: scroll horizontal con el dedo, para que quien no gire el teléfono igual llegue a todas las teclas y nunca quede trabado.
+
+**Disparador de implementación:** se construye **al inicio del build del Bloque 2, ANTES de escribir sus ejercicios** (porque cada ejercicio nuevo asume un rango de teclado). El Bloque 1 ya sellado entra en 2 octavas y no se toca. Aplica igual a la Biblioteca cuando se programe.
+
+---
+
+## 11. DOS TIPOS DE CONTENIDO: REPRODUCIBLE vs VISUAL (DECIDIDO 11/07)
+
+> ⚠️ **REPASAR ANTES DE EJECUTAR.** Igual que la sección 10: se relee y reconfirma con el profesor antes de programar el modelo de contenido de la Biblioteca (Camino 2). Ver también doc 12.
+
+**Verdad de base:** el motor no puede reproducir un ritmo que no está en el dato. La etiqueta de género (bachata, jazz, etc.) no le dice al reproductor cómo suena — el ritmo se infiere solo si está cargado nota por nota. Por eso cada cosa que se carga se marca como uno de dos tipos:
+
+**Tipo 1 — REPRODUCIBLE (curaduría en texto):**
+- El motor lo toca (teclado auto / AlphaTab para guitarra).
+- Requiere altura **+ duración (el ritmo)** cargada nota por nota.
+- Reservado para los demos clave donde el audio realmente enseña (ejercicios del Método / Camino 1, pocos y curados).
+- Alternativa sin tipeo: una partitura conseguida como **MusicXML** (archivo musical, no imagen) se reproduce con su ritmo completo directamente. Una imagen/PDF NO — el motor no la lee.
+
+**Tipo 2 — VISUAL (curaduría de imágenes):**
+- Imagen de partitura / tablatura / acordes. Estático.
+- El motor NO lo toca; **el ritmo vive dentro de la imagen y lo lee el alumno.** Cero duración que cargar.
+- Es el grueso del material masivo de la Biblioteca (6-7 géneros). El volumen enorme cae en la categoría que NO pide encodeo rítmico → la carga de escribir duraciones queda acotada al conjunto chico de demos audibles.
+
+**⚠️ Regla de copyright (misma que sección 1 y doc 05):** material ajeno conseguido —imagen O MusicXML de una obra existente— NO se sube tal cual a un sitio pago. Se usa como inspiración para generar originales del profesor, o se licencia. Los ejercicios que escribe el profesor son suyos, sin problema.
+
+**Optimización futura (NO construir ahora):** "plantillas de ritmo por género" (célula de bachata, patrón de bossa que se repite) solo sirven para ejercicios de acompañamiento/groove con patrón repetido, no para melódicos donde cada nota tiene su valor. Anotado como idea, no para la primera versión.
