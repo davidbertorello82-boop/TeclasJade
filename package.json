@@ -7,7 +7,9 @@
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
-    "validar-adn": "tsx adn-musical/validador/validar-adn.ts"
+    "validar-adn": "tsx adn-musical/validador/validar-adn.ts",
+    "cobertura-adn": "tsx adn-musical/validador/cobertura-v01.ts",
+    "test:cobertura-adn": "tsx adn-musical/validador/cobertura-v01.test.ts"
   },
   "dependencies": {
     "@supabase/ssr": "^0.12.0",

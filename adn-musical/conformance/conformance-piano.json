@@ -1,0 +1,47 @@
+{
+  "schema_version": "0.2.0-draft",
+  "exercise": {
+    "id": "conformance-piano",
+    "title": "Fixture de conformidad: realizacion de piano",
+    "source": { "kind": "original", "author": "IA directora — aprobado por David como conformance_fixture", "octave_convention": "cientifica" },
+    "evidence_default": "[confirmado por David]"
+  },
+  "musical_semantics": {
+    "time": { "signature": "4/4", "beats_per_measure": 4, "beat_unit": "1/4", "bpm": 60, "tempo_term": null },
+    "key": { "tonic": "C", "mode": "major" },
+    "measures": 1,
+    "voices": [
+      { "id": "v1", "kind": "melodic", "events": [
+        { "id": "e01", "measure": 1, "beat": "1/1", "duration": "1/4", "notes": [ { "id": "n01", "written_pitch": { "step": "C", "alter": 0, "octave": 4 } } ] },
+        { "id": "e02", "measure": 1, "beat": "2/1", "duration": "1/4", "notes": [ { "id": "n02", "written_pitch": { "step": "D", "alter": 0, "octave": 4 } } ] },
+        { "id": "e03", "measure": 1, "beat": "3/1", "duration": "1/4", "notes": [ { "id": "n03", "written_pitch": { "step": "E", "alter": 0, "octave": 4 } } ] },
+        { "id": "e04", "measure": 1, "beat": "4/1", "duration": "1/4", "notes": [ { "id": "n04", "written_pitch": { "step": "F", "alter": 0, "octave": 4 } } ] }
+      ] }
+    ]
+  },
+  "instrument_realization": {
+    "kind": "piano",
+    "realizations": [
+      { "note_id": "n01", "hand": "right", "finger": 1 },
+      { "note_id": "n02", "hand": "right", "finger": 2 },
+      { "note_id": "n03", "hand": "right", "finger": 3 },
+      { "note_id": "n04", "hand": "right", "finger": 4 }
+    ]
+  },
+  "text_and_vocal_alignment": null,
+  "presentation_and_rendering": {
+    "type": "reproducible",
+    "views": ["staff_treble", "keyboard"],
+    "controls": ["play", "pause", "restart", "bpm_slider", "loop"],
+    "bpm_initial": 60,
+    "hand_colors": { "right": "naranja", "left": "azul" }
+  },
+  "evidence_governance": {
+    "aprobado_por_david": false,
+    "listo_para_desarrollo": false,
+    "validacion_profesional": "no-requerida",
+    "transposition_allowed": false,
+    "unknown_notation": [],
+    "unsupported_features": []
+  }
+}

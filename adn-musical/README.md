@@ -49,3 +49,24 @@ ejercite esos elementos antes de ampliar el esquema.
 
 La gobernanza pedagógica (aprobaciones, evidencia, derechos) vive en el vault
 de Obsidian, no acá. Los fixtures no son contenido publicado.
+
+## Skill, conformidad y compuertas (v0.1)
+
+- `skill/adn-musical-compilador/SKILL.md` — **fuente editable canónica** del
+  artefacto ejecutable de la Skill ADN v0.1-experimental. La copia instalada en
+  `.claude/skills/adn-musical-compilador/SKILL.md` es un **espejo derivado**:
+  nunca se edita directamente; se regenera copiando desde la fuente y se
+  verifica por SHA-256.
+- `conformance/` — fixtures técnicos de conformidad (no curriculares, no
+  publicables) que respaldan reglas concretas de la cobertura v0.1.
+- `validador/cobertura-v01.ts` — **Compuerta A2** (cobertura v0.1):
+  `npm run cobertura-adn`. Distinción clave: `✓ VÁLIDO` (Compuerta B,
+  `validar-adn`) prueba estructura y semántica contra el esquema general;
+  `✓ COBERTURA v0.1` (Compuerta A2) prueba que el ADN use solo el subconjunto
+  soportado por la skill. Un ADN entregable necesita las dos.
+- `validador/cobertura-v01.test.ts` — pruebas reproducibles de ambas compuertas:
+  `npm run test:cobertura-adn`.
+- `pruebas/` — casos de regresión de la skill (fuente cruda + resultado
+  esperado). **La skill NO debe leer esta carpeta al compilar.**
+- El vault de Obsidian continúa siendo canónico para decisiones y conocimiento;
+  la skill es únicamente el artefacto ejecutable que los aplica.

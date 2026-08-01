@@ -1,0 +1,79 @@
+{
+  "schema_version": "0.2.0-draft",
+  "exercise": {
+    "id": "inedito-01-el-poeta",
+    "title": "El poeta (prueba tecnica)",
+    "source": { "kind": "original", "author": "IA directora — aprobado por David como prueba tecnica no curricular", "octave_convention": "cientifica" },
+    "evidence_default": "[confirmado por David]"
+  },
+  "musical_semantics": {
+    "time": { "signature": "4/4", "beats_per_measure": 4, "beat_unit": "1/4", "bpm": 66, "tempo_term": null },
+    "key": { "tonic": "A", "mode": "minor" },
+    "measures": 2,
+    "voices": [
+      { "id": "v1", "kind": "melodic", "events": [
+        { "id": "e01", "measure": 1, "beat": "1/1", "duration": "1/4", "notes": [ { "id": "n01", "written_pitch": { "step": "A", "alter": 0, "octave": 3 } } ] },
+        { "id": "e02", "measure": 1, "beat": "2/1", "duration": "1/4", "notes": [ { "id": "n02", "written_pitch": { "step": "C", "alter": 0, "octave": 4 } } ] },
+        { "id": "e03", "measure": 1, "beat": "3/1", "duration": "1/4", "notes": [ { "id": "n03", "written_pitch": { "step": "B", "alter": 0, "octave": 3 } } ] },
+        { "id": "e04", "measure": 1, "beat": "4/1", "duration": "1/4", "notes": [ { "id": "n04", "written_pitch": { "step": "D", "alter": 0, "octave": 4 } } ] },
+        { "id": "e05", "measure": 2, "beat": "1/1", "duration": "1/4", "notes": [ { "id": "n05", "written_pitch": { "step": "E", "alter": 0, "octave": 4 } } ] },
+        { "id": "e06", "measure": 2, "beat": "2/1", "duration": "1/4", "notes": [ { "id": "n06", "written_pitch": { "step": "C", "alter": 0, "octave": 4 } } ] },
+        { "id": "e07", "measure": 2, "beat": "3/1", "duration": "1/8", "notes": [ { "id": "n07", "written_pitch": { "step": "B", "alter": 0, "octave": 3 } } ] },
+        { "id": "e08", "measure": 2, "beat": "7/2", "duration": "1/8", "notes": [ { "id": "n08", "written_pitch": { "step": "G", "alter": 1, "octave": 3 } } ] },
+        { "id": "e09", "measure": 2, "beat": "4/1", "duration": "1/4", "notes": [ { "id": "n09", "written_pitch": { "step": "A", "alter": 0, "octave": 3 } } ] }
+      ] }
+    ]
+  },
+  "instrument_realization": {
+    "kind": "voice",
+    "profile": null,
+    "range_orientative": null,
+    "comfortable_tessitura": null,
+    "exercise_range": {
+      "low": { "step": "G", "alter": 1, "octave": 3 },
+      "high": { "step": "E", "alter": 0, "octave": 4 }
+    },
+    "technique": null,
+    "support": { "instrument": "piano", "role": "doubling" }
+  },
+  "text_and_vocal_alignment": {
+    "language": "es",
+    "orthographic": {
+      "text": "El poeta canta al morir la luz",
+      "words": [
+        { "id": "w1", "text": "El", "syllables": [ { "id": "s1", "text": "El" } ] },
+        { "id": "w2", "text": "poeta", "syllables": [ { "id": "s2", "text": "po" }, { "id": "s3", "text": "e" }, { "id": "s4", "text": "ta" } ] },
+        { "id": "w3", "text": "canta", "syllables": [ { "id": "s5", "text": "can" }, { "id": "s6", "text": "ta" } ] },
+        { "id": "w4", "text": "al", "syllables": [ { "id": "s7", "text": "al" } ] },
+        { "id": "w5", "text": "morir", "syllables": [ { "id": "s8", "text": "mo" }, { "id": "s9", "text": "rir" } ] },
+        { "id": "w6", "text": "la", "syllables": [ { "id": "s10", "text": "la" } ] },
+        { "id": "w7", "text": "luz", "syllables": [ { "id": "s11", "text": "luz" } ] }
+      ]
+    },
+    "sung_units": [
+      { "id": "u1", "syllable_ids": ["s1"], "junction": "none", "note_ids": ["n01"] },
+      { "id": "u2", "syllable_ids": ["s2", "s3"], "junction": "sineresis", "note_ids": ["n02"] },
+      { "id": "u3", "syllable_ids": ["s4"], "junction": "none", "note_ids": ["n03"] },
+      { "id": "u4", "syllable_ids": ["s5"], "junction": "none", "note_ids": ["n04"] },
+      { "id": "u5", "syllable_ids": ["s6", "s7"], "junction": "sinalefa", "note_ids": ["n05"] },
+      { "id": "u6", "syllable_ids": ["s8"], "junction": "none", "note_ids": ["n06"] },
+      { "id": "u7", "syllable_ids": ["s9"], "junction": "none", "note_ids": ["n07"] },
+      { "id": "u8", "syllable_ids": ["s10"], "junction": "none", "note_ids": ["n08"] },
+      { "id": "u9", "syllable_ids": ["s11"], "junction": "none", "note_ids": ["n09"] }
+    ]
+  },
+  "presentation_and_rendering": {
+    "type": "reproducible",
+    "views": ["staff_treble", "solfeo_fixed", "lyrics_aligned", "piano_support"],
+    "controls": ["play", "pause", "restart", "bpm_slider", "loop"],
+    "bpm_initial": 66
+  },
+  "evidence_governance": {
+    "aprobado_por_david": false,
+    "listo_para_desarrollo": false,
+    "validacion_profesional": "no-requerida",
+    "transposition_allowed": false,
+    "unknown_notation": [],
+    "unsupported_features": []
+  }
+}
