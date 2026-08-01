@@ -1,0 +1,58 @@
+{
+  "schema_version": "0.2.0-draft",
+  "exercise": {
+    "id": "piloto-3-subida-y-regreso",
+    "title": "Subida y regreso (guitarra)",
+    "source": { "kind": "original", "author": "IA directora — aprobado por David", "octave_convention": "cientifica" },
+    "evidence_default": "[confirmado por David]"
+  },
+  "musical_semantics": {
+    "time": { "signature": "4/4", "beats_per_measure": 4, "beat_unit": "1/4", "bpm": 60, "tempo_term": null },
+    "key": { "tonic": "C", "mode": "major" },
+    "measures": 2,
+    "voices": [
+      { "id": "v1", "kind": "melodic", "events": [
+        { "id": "e01", "measure": 1, "beat": "1/1", "duration": "1/4", "notes": [ { "id": "n01", "written_pitch": { "step": "G", "alter": 0, "octave": 4 } } ] },
+        { "id": "e02", "measure": 1, "beat": "2/1", "duration": "1/4", "notes": [ { "id": "n02", "written_pitch": { "step": "A", "alter": 0, "octave": 4 } } ] },
+        { "id": "e03", "measure": 1, "beat": "3/1", "duration": "1/4", "notes": [ { "id": "n03", "written_pitch": { "step": "B", "alter": 0, "octave": 4 } } ] },
+        { "id": "e04", "measure": 1, "beat": "4/1", "duration": "1/4", "notes": [ { "id": "n04", "written_pitch": { "step": "C", "alter": 0, "octave": 5 } } ] },
+        { "id": "e05", "measure": 2, "beat": "1/1", "duration": "1/4", "notes": [ { "id": "n05", "written_pitch": { "step": "B", "alter": 0, "octave": 4 } } ] },
+        { "id": "e06", "measure": 2, "beat": "2/1", "duration": "1/4", "notes": [ { "id": "n06", "written_pitch": { "step": "A", "alter": 0, "octave": 4 } } ] },
+        { "id": "e07", "measure": 2, "beat": "3/1", "duration": "1/2", "notes": [ { "id": "n07", "written_pitch": { "step": "G", "alter": 0, "octave": 4 } } ] }
+      ] }
+    ]
+  },
+  "instrument_realization": {
+    "kind": "guitar",
+    "tuning": "EADGBE",
+    "capo": 0,
+    "sounding_transposition_octaves": -1,
+    "position": "primera",
+    "right_hand": "libre (pulgar o púa)",
+    "realizations": [
+      { "note_id": "n01", "string": 3, "fret": 0, "finger": 0, "alternatives": [ { "string": 4, "fret": 5, "finger": 4 } ] },
+      { "note_id": "n02", "string": 3, "fret": 2, "finger": 2, "alternatives": [ { "string": 4, "fret": 7, "finger": null } ] },
+      { "note_id": "n03", "string": 2, "fret": 0, "finger": 0, "alternatives": [ { "string": 3, "fret": 4, "finger": 4 } ] },
+      { "note_id": "n04", "string": 2, "fret": 1, "finger": 1, "alternatives": [ { "string": 3, "fret": 5, "finger": null } ] },
+      { "note_id": "n05", "string": 2, "fret": 0, "finger": 0, "alternatives": [ { "string": 3, "fret": 4, "finger": null } ] },
+      { "note_id": "n06", "string": 3, "fret": 2, "finger": 2, "alternatives": [ { "string": 4, "fret": 7, "finger": null } ] },
+      { "note_id": "n07", "string": 3, "fret": 0, "finger": 0, "alternatives": [ { "string": 4, "fret": 5, "finger": null } ] }
+    ]
+  },
+  "text_and_vocal_alignment": null,
+  "presentation_and_rendering": {
+    "type": "reproducible",
+    "views": ["tablature", "staff_treble"],
+    "controls": ["play", "pause", "restart", "bpm_slider", "loop"],
+    "bpm_initial": 60,
+    "engine_suggested": "alphatab"
+  },
+  "evidence_governance": {
+    "aprobado_por_david": true,
+    "listo_para_desarrollo": false,
+    "validacion_profesional": "pendiente",
+    "transposition_allowed": false,
+    "unknown_notation": [],
+    "unsupported_features": []
+  }
+}

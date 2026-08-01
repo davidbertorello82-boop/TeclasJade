@@ -1,0 +1,347 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "adn-musical.schema.json",
+  "title": "ADN Musical de Teclas Jade",
+  "description": "Esquema v0.2.0-draft [propuesto]. Valida la instancia JSON de un ejercicio en las cinco capas de la Arquitectura del Compilador de ADN Musical v0.2. El Piloto 1 canónico del vault es fixture de conformidad obligatorio de este esquema.",
+  "type": "object",
+  "required": ["schema_version", "exercise", "musical_semantics", "instrument_realization", "text_and_vocal_alignment", "presentation_and_rendering", "evidence_governance"],
+  "additionalProperties": false,
+  "properties": {
+    "schema_version": { "type": "string", "pattern": "^0\\.2\\.0(-draft)?$" },
+    "exercise": {
+      "type": "object",
+      "required": ["id", "title", "source"],
+      "additionalProperties": false,
+      "properties": {
+        "id": { "type": "string", "pattern": "^[a-z0-9][a-z0-9-]*$" },
+        "title": { "type": "string", "minLength": 1 },
+        "source": {
+          "type": "object",
+          "required": ["kind"],
+          "additionalProperties": false,
+          "properties": {
+            "kind": { "enum": ["original", "external", "external_conformance_fixture"] },
+            "author": { "type": ["string", "null"] },
+            "reference": { "type": ["string", "null"] },
+            "octave_convention": { "enum": ["cientifica", "latina", "midi_fabricante", null] },
+            "rights": { "type": ["object", "null"] }
+          }
+        },
+        "evidence_default": { "$ref": "#/$defs/evidenceTag" }
+      }
+    },
+    "musical_semantics": {
+      "type": "object",
+      "required": ["time", "measures", "voices"],
+      "additionalProperties": false,
+      "properties": {
+        "time": {
+          "type": "object",
+          "required": ["signature", "beats_per_measure", "beat_unit", "bpm"],
+          "additionalProperties": false,
+          "properties": {
+            "signature": { "type": "string", "pattern": "^[0-9]+/[0-9]+$" },
+            "beats_per_measure": { "type": "integer", "minimum": 1 },
+            "beat_unit": { "$ref": "#/$defs/fraction" },
+            "bpm": { "type": "number", "exclusiveMinimum": 0 },
+            "tempo_term": { "type": ["string", "null"] }
+          }
+        },
+        "key": {
+          "type": "object",
+          "required": ["tonic", "mode"],
+          "additionalProperties": false,
+          "properties": {
+            "tonic": { "type": "string", "pattern": "^[A-G](#|b)?$" },
+            "mode": { "enum": ["major", "minor"] }
+          }
+        },
+        "measures": { "type": "integer", "minimum": 1 },
+        "anacrusis": { "type": ["object", "null"] },
+        "structure": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": ["role", "measures"],
+            "additionalProperties": false,
+            "properties": {
+              "role": { "type": "string" },
+              "measures": { "type": "array", "items": { "type": "integer", "minimum": 1 }, "minItems": 1 },
+              "repeats": { "type": "string" },
+              "gap": { "enum": ["none", "one_measure"] }
+            }
+          }
+        },
+        "voices": {
+          "type": "array",
+          "minItems": 1,
+          "items": { "$ref": "#/$defs/voice" }
+        }
+      }
+    },
+    "instrument_realization": {
+      "oneOf": [
+        { "$ref": "#/$defs/realizationNone" },
+        { "$ref": "#/$defs/realizationVoice" },
+        { "$ref": "#/$defs/realizationGuitar" },
+        { "$ref": "#/$defs/realizationPiano" }
+      ]
+    },
+    "text_and_vocal_alignment": {
+      "oneOf": [
+        { "type": "null" },
+        { "$ref": "#/$defs/textAlignment" }
+      ]
+    },
+    "presentation_and_rendering": {
+      "type": "object",
+      "required": ["type", "views", "controls"],
+      "additionalProperties": false,
+      "properties": {
+        "type": { "enum": ["reproducible", "visual"] },
+        "views": { "type": "array", "items": { "type": "string" }, "minItems": 1 },
+        "controls": { "type": "array", "items": { "type": "string" } },
+        "bpm_initial": { "type": "number", "exclusiveMinimum": 0 },
+        "engine_suggested": { "type": ["string", "null"] },
+        "hand_colors": { "type": ["object", "null"] }
+      }
+    },
+    "variants": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["id", "transform"],
+        "additionalProperties": false,
+        "properties": {
+          "id": { "type": "string" },
+          "label": { "type": "string" },
+          "transform": { "type": "object", "minProperties": 1 }
+        }
+      }
+    },
+    "evidence_governance": {
+      "type": "object",
+      "required": ["aprobado_por_david", "listo_para_desarrollo", "validacion_profesional", "transposition_allowed", "unknown_notation", "unsupported_features"],
+      "additionalProperties": false,
+      "properties": {
+        "aprobado_por_david": { "type": "boolean" },
+        "listo_para_desarrollo": { "type": "boolean" },
+        "validacion_profesional": { "enum": ["no-requerida", "pendiente", "aprobada", "requiere-cambios"] },
+        "transposition_allowed": { "type": "boolean" },
+        "unknown_notation": { "type": "array", "items": { "$ref": "#/$defs/incident" } },
+        "unsupported_features": { "type": "array", "items": { "$ref": "#/$defs/incident" } },
+        "field_evidence": { "type": ["object", "null"] }
+      }
+    }
+  },
+  "$defs": {
+    "fraction": { "type": "string", "pattern": "^[0-9]+/[0-9]+$" },
+    "evidenceTag": { "enum": ["[verificado]", "[documentado]", "[confirmado por David]", "[calculado]", "[ilegible]", "[desconocido]"] },
+    "incident": {
+      "type": "object",
+      "required": ["locator", "description"],
+      "additionalProperties": false,
+      "properties": {
+        "locator": { "type": "string" },
+        "description": { "type": "string" },
+        "hypotheses": { "type": "array", "items": { "type": "string" } },
+        "requires_human_review": { "type": "boolean" }
+      }
+    },
+    "writtenPitch": {
+      "type": "object",
+      "required": ["step", "alter", "octave"],
+      "additionalProperties": false,
+      "properties": {
+        "step": { "enum": ["C", "D", "E", "F", "G", "A", "B"] },
+        "alter": { "type": "integer", "minimum": -2, "maximum": 2 },
+        "octave": { "type": "integer", "minimum": 0, "maximum": 8 }
+      }
+    },
+    "note": {
+      "type": "object",
+      "required": ["id", "written_pitch"],
+      "additionalProperties": false,
+      "properties": {
+        "id": { "type": "string" },
+        "written_pitch": { "$ref": "#/$defs/writtenPitch" },
+        "evidence": { "$ref": "#/$defs/evidenceTag" }
+      }
+    },
+    "event": {
+      "type": "object",
+      "required": ["id", "measure", "beat", "duration"],
+      "additionalProperties": false,
+      "properties": {
+        "id": { "type": "string" },
+        "measure": { "type": "integer", "minimum": 1 },
+        "beat": { "$ref": "#/$defs/fraction" },
+        "duration": { "$ref": "#/$defs/fraction" },
+        "notes": { "type": "array", "items": { "$ref": "#/$defs/note" }, "minItems": 1 }
+      }
+    },
+    "voice": {
+      "type": "object",
+      "required": ["id", "kind", "events"],
+      "additionalProperties": false,
+      "properties": {
+        "id": { "type": "string" },
+        "kind": { "enum": ["percussive", "melodic"] },
+        "events": { "type": "array", "items": { "$ref": "#/$defs/event" }, "minItems": 1 }
+      }
+    },
+    "realizationNone": {
+      "type": "object",
+      "required": ["kind"],
+      "additionalProperties": false,
+      "properties": {
+        "kind": { "const": "none" },
+        "sound": { "type": "string" }
+      }
+    },
+    "realizationVoice": {
+      "type": "object",
+      "required": ["kind", "exercise_range"],
+      "additionalProperties": false,
+      "properties": {
+        "kind": { "const": "voice" },
+        "profile": { "type": ["string", "null"] },
+        "range_orientative": { "type": ["object", "null"] },
+        "comfortable_tessitura": { "type": ["object", "null"] },
+        "exercise_range": {
+          "type": "object",
+          "required": ["low", "high"],
+          "additionalProperties": false,
+          "properties": {
+            "low": { "$ref": "#/$defs/writtenPitch" },
+            "high": { "$ref": "#/$defs/writtenPitch" }
+          }
+        },
+        "technique": { "type": ["string", "null"] },
+        "support": { "type": ["object", "null"] }
+      }
+    },
+    "realizationGuitar": {
+      "type": "object",
+      "required": ["kind", "tuning", "capo", "sounding_transposition_octaves", "realizations"],
+      "additionalProperties": false,
+      "properties": {
+        "kind": { "const": "guitar" },
+        "tuning": { "type": "string", "pattern": "^[A-G](#|b)?([A-G](#|b)?){5}$" },
+        "capo": { "type": "integer", "minimum": 0, "maximum": 12 },
+        "sounding_transposition_octaves": { "type": "integer" },
+        "position": { "type": ["string", "null"] },
+        "right_hand": { "type": ["string", "null"] },
+        "realizations": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "type": "object",
+            "required": ["note_id", "string", "fret", "finger"],
+            "additionalProperties": false,
+            "properties": {
+              "note_id": { "type": "string" },
+              "string": { "type": "integer", "minimum": 1, "maximum": 6 },
+              "fret": { "type": "integer", "minimum": 0, "maximum": 24 },
+              "finger": { "type": "integer", "minimum": 0, "maximum": 4 },
+              "evidence": { "$ref": "#/$defs/evidenceTag" },
+              "alternatives": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "required": ["string", "fret"],
+                  "additionalProperties": false,
+                  "properties": {
+                    "string": { "type": "integer", "minimum": 1, "maximum": 6 },
+                    "fret": { "type": "integer", "minimum": 0, "maximum": 24 },
+                    "finger": { "type": ["integer", "null"], "minimum": 0, "maximum": 4 }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "realizationPiano": {
+      "type": "object",
+      "required": ["kind", "realizations"],
+      "additionalProperties": false,
+      "properties": {
+        "kind": { "const": "piano" },
+        "realizations": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "type": "object",
+            "required": ["note_id", "hand"],
+            "additionalProperties": false,
+            "properties": {
+              "note_id": { "type": "string" },
+              "hand": { "enum": ["right", "left"] },
+              "finger": { "type": ["integer", "null"], "minimum": 1, "maximum": 5 }
+            }
+          }
+        }
+      }
+    },
+    "textAlignment": {
+      "type": "object",
+      "required": ["language", "orthographic", "sung_units"],
+      "additionalProperties": false,
+      "properties": {
+        "language": { "type": "string" },
+        "orthographic": {
+          "type": "object",
+          "required": ["text", "words"],
+          "additionalProperties": false,
+          "properties": {
+            "text": { "type": "string" },
+            "words": {
+              "type": "array",
+              "minItems": 1,
+              "items": {
+                "type": "object",
+                "required": ["id", "text", "syllables"],
+                "additionalProperties": false,
+                "properties": {
+                  "id": { "type": "string" },
+                  "text": { "type": "string" },
+                  "syllables": {
+                    "type": "array",
+                    "minItems": 1,
+                    "items": {
+                      "type": "object",
+                      "required": ["id", "text"],
+                      "additionalProperties": false,
+                      "properties": {
+                        "id": { "type": "string" },
+                        "text": { "type": "string" }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "sung_units": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "type": "object",
+            "required": ["id", "syllable_ids", "junction", "note_ids"],
+            "additionalProperties": false,
+            "properties": {
+              "id": { "type": "string" },
+              "syllable_ids": { "type": "array", "items": { "type": "string" }, "minItems": 1 },
+              "junction": { "enum": ["none", "sinalefa", "sineresis", "hiato_deliberado", "dieresis_interna"] },
+              "note_ids": { "type": "array", "items": { "type": "string" }, "minItems": 1 },
+              "melisma": { "type": "boolean" }
+            }
+          }
+        }
+      }
+    }
+  }
+}

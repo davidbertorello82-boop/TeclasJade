@@ -1,0 +1,47 @@
+{
+  "schema_version": "0.2.0-draft",
+  "exercise": {
+    "id": "piloto-1-eco-ritmico",
+    "title": "Eco rítmico",
+    "source": { "kind": "original", "author": "David Bertorello" },
+    "evidence_default": "[confirmado por David]"
+  },
+  "musical_semantics": {
+    "time": { "signature": "4/4", "beats_per_measure": 4, "beat_unit": "1/4", "bpm": 80, "tempo_term": null },
+    "measures": 4,
+    "structure": [
+      { "role": "lider", "measures": [1, 2] },
+      { "role": "eco", "measures": [3, 4], "repeats": "lider", "gap": "none" }
+    ],
+    "voices": [
+      { "id": "v1", "kind": "percussive", "events": [
+        { "id": "e01", "measure": 1, "beat": "1/1", "duration": "1/4" },
+        { "id": "e02", "measure": 1, "beat": "2/1", "duration": "1/4" },
+        { "id": "e03", "measure": 1, "beat": "3/1", "duration": "1/8" },
+        { "id": "e04", "measure": 1, "beat": "7/2", "duration": "1/8" },
+        { "id": "e05", "measure": 1, "beat": "4/1", "duration": "1/4" },
+        { "id": "e06", "measure": 2, "beat": "1/1", "duration": "1/8" },
+        { "id": "e07", "measure": 2, "beat": "3/2", "duration": "1/8" },
+        { "id": "e08", "measure": 2, "beat": "2/1", "duration": "1/4" },
+        { "id": "e09", "measure": 2, "beat": "3/1", "duration": "1/4" },
+        { "id": "e10", "measure": 2, "beat": "4/1", "duration": "1/4" }
+      ]}
+    ]
+  },
+  "instrument_realization": { "kind": "none", "sound": "click_neutral" },
+  "text_and_vocal_alignment": null,
+  "presentation_and_rendering": {
+    "type": "reproducible",
+    "views": ["rhythm_grid"],
+    "controls": ["play", "pause", "restart", "bpm_slider", "loop"],
+    "bpm_initial": 80
+  },
+  "evidence_governance": {
+    "aprobado_por_david": true,
+    "listo_para_desarrollo": false,
+    "validacion_profesional": "no-requerida",
+    "transposition_allowed": false,
+    "unknown_notation": [],
+    "unsupported_features": []
+  }
+}
