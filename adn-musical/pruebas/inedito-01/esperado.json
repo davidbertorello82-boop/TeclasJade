@@ -1,5 +1,5 @@
 {
-  "schema_version": "0.2.0-draft",
+  "schema_version": "0.2.1-draft",
   "exercise": {
     "id": "inedito-01-el-poeta",
     "title": "El poeta (prueba tecnica)",
@@ -74,6 +74,23 @@
     "validacion_profesional": "no-requerida",
     "transposition_allowed": false,
     "unknown_notation": [],
-    "unsupported_features": []
+    "unsupported_features": [],
+    "field_evidence": {
+      "/musical_semantics/voices/0/events/0/beat": { "evidence": "[calculado]", "basis": "calc.timeline.measure-beat.v1" },
+      "/musical_semantics/voices/0/events/1/beat": { "evidence": "[calculado]", "basis": "calc.timeline.measure-beat.v1" },
+      "/musical_semantics/voices/0/events/2/beat": { "evidence": "[calculado]", "basis": "calc.timeline.measure-beat.v1" },
+      "/musical_semantics/voices/0/events/3/beat": { "evidence": "[calculado]", "basis": "calc.timeline.measure-beat.v1" },
+      "/musical_semantics/voices/0/events/4/beat": { "evidence": "[calculado]", "basis": "calc.timeline.measure-beat.v1" },
+      "/musical_semantics/voices/0/events/5/beat": { "evidence": "[calculado]", "basis": "calc.timeline.measure-beat.v1" },
+      "/musical_semantics/voices/0/events/6/beat": { "evidence": "[calculado]", "basis": "calc.timeline.measure-beat.v1" },
+      "/musical_semantics/voices/0/events/7/beat": { "evidence": "[calculado]", "basis": "calc.timeline.measure-beat.v1" },
+      "/musical_semantics/voices/0/events/8/beat": { "evidence": "[calculado]", "basis": "calc.timeline.measure-beat.v1" },
+      "/instrument_realization/exercise_range": { "evidence": "[calculado]", "basis": "calc.exercise.written-range.v1" },
+      "/text_and_vocal_alignment/language": { "evidence": "[verificado]", "basis": "verify.text.language.v1" },
+      "/presentation_and_rendering/type": { "evidence": "[documentado]", "basis": "doc.render.reproducible-type.v1" },
+      "/presentation_and_rendering/views": { "evidence": "[documentado]", "basis": "doc.render.canto-views.v1" },
+      "/presentation_and_rendering/controls": { "evidence": "[documentado]", "basis": "doc.render.minimum-controls.v1" },
+      "/presentation_and_rendering/bpm_initial": { "evidence": "[documentado]", "basis": "doc.render.initial-bpm.v1" }
+    }
   }
 }

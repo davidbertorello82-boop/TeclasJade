@@ -36,14 +36,19 @@ salidas completas.
 
 Antes de compilar por primera vez en una sesión, leé:
 
-1. `adn-musical/schema/adn-musical.schema.json` — el contrato (repo técnico).
+1. `adn-musical/schema/adn-musical.schema.json` — el contrato (repo técnico) —
+   y `adn-musical/schema/evidence-basis.v1.json` — el registro de
+   identificadores `basis` para la procedencia por dato (§3-bis).
 2. `adn-musical/fixtures/*.json` (pilotos canónicos, copias del vault) y
    `adn-musical/conformance/*.json` (fixtures técnicos de conformidad) — tu
    referencia de estructura y estilo. La carpeta `adn-musical/pruebas/` NO es
    material de referencia: no la leas al compilar.
 3. Del vault (`La Casa del Cerebro/02 - Desarrollo/ADN Musical e Interfaz de
-   Audio/`): `🧭 Arquitectura del Compilador de ADN Musical v0.2.md` y
-   `📋 Decisiones del Compilador de ADN Musical — 2026-07.md`.
+   Audio/`): `🧭 Arquitectura del Compilador de ADN Musical v0.2.md`,
+   `📋 Decisiones del Compilador de ADN Musical — 2026-07.md` y
+   `📐 Decisión — Formato técnico del ADN musical.md`. Ahí vive también el
+   registro canónico `evidence-basis.v1.json`; el del repo es su copia
+   ejecutable derivada.
 
 Herramientas obligatorias (desde la raíz del repo técnico): `npm run validar-adn`
 (Compuerta B) y `npm run cobertura-adn` (Compuerta A2). Tu opinión no sustituye a
@@ -81,6 +86,8 @@ notación científica interna, ids estables (`e01`/`n01`/`u1`/`s1`/`w1`), capas
 cruzadas solo por ids, repeticiones en `structure` sin duplicar eventos, variantes
 solo del allowlist (§3). Piano: incluí `presentation_and_rendering.hand_colors`
 con exactamente `{"right": "naranja", "left": "azul"}` — A2 lo exige.
+Registrá la procedencia por dato en `evidence_governance.field_evidence`
+siguiendo el contrato del §3-bis: es parte de la normalización, no un adorno.
 
 **Paso 4 — Compuertas B y A2.** Escribí el ADN en el **scratchpad temporal de la
 sesión** — directorio temporal propio de la sesión de trabajo, obligatoriamente
@@ -94,7 +101,9 @@ esquema/validador/comprobador), revalidá. Contradicción de la fuente →
 **Paso 5 — Entrega.** Solo con **B ✓ y A2 ✓**: presentá (a) el ADN completo,
 (b) las salidas completas de ambas compuertas, (c) el manifiesto de render —
 cuyos colores de mano salen del propio ADN (`hand_colors`), no de tu criterio —,
-(d) los datos `[calculado]` con su regla, y (e) las decisiones que quedan para
+(d) los datos `[calculado]` con su regla — se repiten en la entrega Y quedan
+etiquetados dentro del ADN en `field_evidence` (regla 7 del §3-bis): la entrega
+no sustituye al etiquetado —, y (e) las decisiones que quedan para
 David. El ADN nace con `aprobado_por_david: false` salvo registro explícito en
 contrario. La integración al vault o al repo SIEMPRE ocurre vía lote aprobado
 aparte — vos no escribís en las fuentes canónicas.
@@ -168,6 +177,83 @@ y prueba.
 lyrics_aligned, piano_support, tablature, keyboard}; `controls` ⊆ {play, pause,
 restart, bpm_slider, loop}. Los controles son del reproductor y no transforman el
 ADN.
+
+## 3-bis. Procedencia por dato: contrato de `field_evidence`
+
+`exercise.evidence_default` es solo el valor por defecto. Cuando la procedencia
+de un dato concreto difiera de ese valor, se registra en
+`evidence_governance.field_evidence`.
+
+- **Clave:** JSON Pointer RFC 6901 hacia un campo existente del propio ADN. El
+  puntero vacío `""` (raíz) queda rechazado por este contrato.
+- **Valor:** `{ "evidence": <etiqueta>, "basis": <identificador> }`, sin
+  propiedades adicionales.
+
+**Las nueve reglas del contrato:**
+
+1. Todo valor derivado queda etiquetado **dentro** del ADN, no solo en la
+   entrega.
+2. `basis` es un identificador del registro, nunca una frase libre.
+3. Una confirmación parcial de David se registra en `field_evidence`; **no**
+   eleva `evidence_default`.
+4. Los punteros **no pueden solaparse padre/hijo**.
+5. Los identificadores técnicos generados y los campos de transporte
+   (`schema_version`) no requieren evidencia; sí la requieren los datos
+   musicales, pedagógicos, de realización, de presentación y de gobernanza.
+6. Los valores derivados de decisiones canónicas registradas en el vault llevan
+   `[documentado]`.
+7. Los `[calculado]` se conservan en el ADN **y** se repiten en la entrega del
+   Paso 5.
+8. Las etiquetas no modifican `aprobado_por_david`, `listo_para_desarrollo` ni
+   `validacion_profesional`.
+9. **No inventás identificadores:** si un derivado necesita un `basis` no
+   registrado, te detenés con `pending_decision` y solicitás la decisión de
+   David.
+
+**Frontera de cuatro clases.** Esta frontera decide si un campo lleva entrada:
+
+| Clase | Definición | Entrada |
+|---|---|---|
+| **Transcripción** | reexpresar en el vocabulario del esquema un hecho que la fuente enuncia (La → `A`; «negra» → `"1/4"`; `4/4` → `beats_per_measure: 4` y `beat_unit: "1/4"`) | **sin entrada** (la cubre `evidence_default`) |
+| **Verificación** | comprobar un hecho directamente contra el artefacto fuente | `[verificado]` |
+| **Documentación** | aplicar una decisión canónica registrada en el vault | `[documentado]` |
+| **Cálculo** | derivar por aritmética o recorrido estructural un valor que la fuente no enuncia | `[calculado]` |
+
+Tampoco llevan entrada los `null` que solo declaran ausencia ni las listas de
+incidencias vacías.
+
+**Copia ejecutable derivada del registro** (canónico: el vault; ante
+divergencia manda el vault). Cada identificador fija su etiqueta obligatoria y
+el puntero o patrón sobre el que puede aparecer (`*` = exactamente un índice de
+array válido). La Compuerta B aplica este mapa cerrado entero; los prefijos
+`calc.` / `doc.` / `verify.` son descriptivos, no autoridad:
+
+| Identificador | Etiqueta | Puntero o patrón |
+|---|---|---|
+| `calc.exercise.written-range.v1` | `[calculado]` | `/instrument_realization/exercise_range` |
+| `calc.timeline.measure-beat.v1` | `[calculado]` | `/musical_semantics/voices/*/events/*/beat` |
+| `doc.render.canto-views.v1` | `[documentado]` | `/presentation_and_rendering/views` |
+| `doc.render.initial-bpm.v1` | `[documentado]` | `/presentation_and_rendering/bpm_initial` |
+| `doc.render.minimum-controls.v1` | `[documentado]` | `/presentation_and_rendering/controls` |
+| `doc.render.reproducible-type.v1` | `[documentado]` | `/presentation_and_rendering/type` |
+| `verify.text.language.v1` | `[verificado]` | `/text_and_vocal_alignment/language` |
+
+**Regla operativa:** al compilar, TODO campo del ADN cuyo puntero encaje en un
+patrón del registro y cuyo valor NO sea transcripción de la fuente lleva su
+entrada en `field_evidence` con la etiqueta y el `basis` del registro. En
+particular: cada `beat` calculado por acumulación lleva su entrada
+(`calc.timeline.measure-beat.v1`: 1 más la suma de las duraciones anteriores de
+esa misma voz en ese compás divididas por `beat_unit`, reiniciando en 1 al
+cambiar de compás); el `exercise_range` calculado recorriendo todas las voces
+lleva la suya; el idioma comprobado contra el texto fuente lleva
+`verify.text.language.v1`; y `type`, `views`, `controls` y `bpm_initial`,
+cuando salen de decisiones canónicas del vault y no de la fuente, llevan sus
+`doc.render.*`.
+
+**Fixtures históricos:** los de `fixtures/` y `conformance/` son referencias
+musicales y estructurales, no ejemplos de completitud de procedencia; su
+omisión histórica de `field_evidence` no exime a las compilaciones nuevas; su
+migración será otro lote.
 
 ## 4. Taxonomía de estados musicales
 

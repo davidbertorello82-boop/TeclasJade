@@ -3,8 +3,15 @@
 Ejercicio vocal para compilar. Convención de octava: científica internacional.
 
 Metadatos declarados:
+- Identificador exacto del ejercicio: `inedito-01-el-poeta`. Título exacto:
+  `El poeta (prueba tecnica)`.
 - Origen: composición original (`source.kind: original`).
 - Autoría exacta: `IA directora — aprobado por David como prueba tecnica no curricular`.
+- David confirmó expresamente todos los datos declarados en esta fuente. Esa
+  confirmación alcanza SOLO lo aquí declarado: los valores que el compilador
+  derive (cálculos, verificaciones contra este artefacto o aplicación de
+  decisiones canónicas del vault) NO quedan cubiertos por ella y siguen las
+  reglas de procedencia por dato de la skill.
 - La aprobación de David es únicamente para uso como prueba técnica: NO es
   aprobación pedagógica ni curricular. Gobernanza: `aprobado_por_david: false`,
   `listo_para_desarrollo: false`, `validacion_profesional: no-requerida`.

@@ -21,8 +21,14 @@ Este repositorio vive en:
 ## Qué es cada cosa
 
 - `schema/adn-musical.schema.json` — **contrato, no implementación**: JSON Schema
-  (draft 2020-12) del ADN v0.2.0-draft. Ningún renderer ni componente debe
+  (draft 2020-12) del ADN v0.2.1-draft. Ningún renderer ni componente debe
   reinterpretar lo que el contrato ya define.
+- `schema/evidence-basis.v1.json` — vocabulario controlado de identificadores
+  `basis` para la procedencia por dato (`field_evidence`). Es una **copia
+  técnica derivada byte a byte** del registro canónico del vault
+  (`02 - Desarrollo/ADN Musical e Interfaz de Audio/evidence-basis.v1.json`);
+  ante divergencia manda el vault. La Compuerta B lo carga en ejecución y
+  falla de forma cerrada si no puede validarlo íntegro.
 - `fixtures/` — los tres pilotos aprobados por David, usados como casos de
   conformidad del esquema y del validador.
 - `validador/validar-adn.ts` — validación estructural (ajv) + semántica
@@ -42,7 +48,7 @@ todos pasan.
 
 ## Versión y limitación vigente
 
-Versión del contrato: **v0.2.0-draft**. Todavía **no** modela: ligaduras de
+Versión del contrato: **v0.2.1-draft**. Todavía **no** modela: ligaduras de
 prolongación (ties), grupos irregulares (tuplets), acordes multi-nota,
 dinámicas ni armaduras con alteraciones. Queda pendiente un **Piloto 4** que
 ejercite esos elementos antes de ampliar el esquema.

@@ -1,5 +1,5 @@
 {
-  "schema_version": "0.2.0-draft",
+  "schema_version": "0.2.1-draft",
   "exercise": {
     "id": "conformance-alteraciones",
     "title": "Fixture de conformidad: alteraciones individuales",

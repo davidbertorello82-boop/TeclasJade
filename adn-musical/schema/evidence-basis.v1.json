@@ -1,0 +1,52 @@
+{
+  "registry": "evidence-basis",
+  "version": "v1",
+  "applies_to_schema_version": "0.2.1-draft",
+  "canonical_source": "02 - Desarrollo/ADN Musical e Interfaz de Audio/evidence-basis.v1.json",
+  "pointer_pattern_syntax": "JSON Pointer RFC 6901; el token '*' representa exactamente un índice de array válido (dígitos sin ceros iniciales)",
+  "entry_order": "alfabético por id",
+  "entries": [
+    {
+      "id": "calc.exercise.written-range.v1",
+      "evidence": "[calculado]",
+      "pointer_pattern": "/instrument_realization/exercise_range",
+      "meaning": "Altura escrita mínima y máxima del ejercicio, calculadas recorriendo las notas de todas las voces."
+    },
+    {
+      "id": "calc.timeline.measure-beat.v1",
+      "evidence": "[calculado]",
+      "pointer_pattern": "/musical_semantics/voices/*/events/*/beat",
+      "meaning": "Posición del evento dentro de su compás y voz, expresada en unidades de beat_unit: 1 más la suma de las duraciones anteriores de esa misma voz en ese compás divididas por beat_unit; se reinicia en 1 al cambiar de compás."
+    },
+    {
+      "id": "doc.render.canto-views.v1",
+      "evidence": "[documentado]",
+      "pointer_pattern": "/presentation_and_rendering/views",
+      "meaning": "Vistas de canto de primera etapa: pentagrama, solfeo fijo, letra alineada y piano de apoyo."
+    },
+    {
+      "id": "doc.render.initial-bpm.v1",
+      "evidence": "[documentado]",
+      "pointer_pattern": "/presentation_and_rendering/bpm_initial",
+      "meaning": "Regla canónica: el BPM inicial del reproductor es el BPM sugerido del ejercicio."
+    },
+    {
+      "id": "doc.render.minimum-controls.v1",
+      "evidence": "[documentado]",
+      "pointer_pattern": "/presentation_and_rendering/controls",
+      "meaning": "Controles mínimos del reproductor: play, pausa, reiniciar, selector de BPM y loop."
+    },
+    {
+      "id": "doc.render.reproducible-type.v1",
+      "evidence": "[documentado]",
+      "pointer_pattern": "/presentation_and_rendering/type",
+      "meaning": "Clasificación del contenido según la distinción canónica entre material REPRODUCIBLE y material VISUAL."
+    },
+    {
+      "id": "verify.text.language.v1",
+      "evidence": "[verificado]",
+      "pointer_pattern": "/text_and_vocal_alignment/language",
+      "meaning": "Idioma comprobado directamente contra el texto del artefacto fuente; no es un cálculo."
+    }
+  ]
+}

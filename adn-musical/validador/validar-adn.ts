@@ -1,11 +1,17 @@
-// Validador del ADN Musical de Teclas Jade (v0.2.0-draft).
-// Estructural: ajv (JSON Schema draft 2020-12). Semántico: invariantes con
-// aritmética de fracciones exactas (enteros); prohibido el punto flotante
-// para duraciones y posiciones.
+// Validador del ADN Musical de Teclas Jade (v0.2.1-draft).
+// Compuerta B: validación estructural (ajv, JSON Schema draft 2020-12) +
+// semántica (invariantes B-1..B-7 con aritmética de fracciones exactas;
+// prohibido el punto flotante para duraciones y posiciones).
+// El vocabulario de identificadores `basis` vive en
+// ../schema/evidence-basis.v1.json (copia ejecutable derivada del registro
+// canónico del vault). Se carga y valida ÍNTEGRO antes de validar cualquier
+// documento; ante cualquier defecto la compuerta falla cerrada con una única
+// incidencia operational_error/registro_basis y NO ejecuta ni la fase
+// estructural ni la semántica (jamás un mapa parcial).
 // Uso: npm run validar-adn [-- archivo1.json ...]
 // Sin argumentos valida todos los .json de adn-musical/fixtures/.
 
-import Ajv2020 from "ajv/dist/2020";
+import Ajv2020, { type AnySchema, type ErrorObject, type ValidateFunction } from "ajv/dist/2020";
 import * as fs from "node:fs";
 import * as path from "node:path";
 
@@ -43,7 +49,7 @@ const fstr = (a: Frac): string => `${a.num}/${a.den}`;
 
 const STEP_SEMITONE: Record<string, number> = { C: 0, D: 2, E: 4, F: 5, G: 7, A: 9, B: 11 };
 
-function midiOf(p: { step: string; alter: number; octave: number }): number {
+function midiOf(p: WrittenPitch): number {
   return (p.octave + 1) * 12 + STEP_SEMITONE[p.step] + p.alter;
 }
 
@@ -54,23 +60,424 @@ const OPEN_STRING_WRITTEN_MIDI: Record<number, number> = {
   6: 52, 5: 57, 4: 62, 3: 67, 2: 71, 1: 76,
 };
 
+// ---------- tipos del documento (la forma la garantiza el esquema vía ajv) ----------
+
+export interface WrittenPitch {
+  step: string;
+  alter: number;
+  octave: number;
+}
+
+export interface NotaAdn {
+  id: string;
+  written_pitch: WrittenPitch;
+  evidence?: string;
+}
+
+export interface EventoAdn {
+  id: string;
+  measure: number;
+  beat: string;
+  duration: string;
+  notes?: NotaAdn[];
+}
+
+export interface VozAdn {
+  id: string;
+  kind: string;
+  events: EventoAdn[];
+}
+
+export interface SeccionAdn {
+  role: string;
+  measures: number[];
+  repeats?: string;
+  gap?: string;
+}
+
+export interface AlternativaGuitarra {
+  string: number;
+  fret: number;
+  finger?: number | null;
+}
+
+export interface RealizacionAdn {
+  note_id: string;
+  string?: number;
+  fret?: number;
+  finger?: number | null;
+  hand?: string;
+  evidence?: string;
+  alternatives?: AlternativaGuitarra[];
+}
+
+export interface RealizacionInstrumento {
+  kind: string;
+  sound?: string;
+  tuning?: string;
+  capo?: number;
+  sounding_transposition_octaves?: number;
+  position?: string | null;
+  right_hand?: string | null;
+  realizations?: RealizacionAdn[];
+  profile?: string | null;
+  range_orientative?: object | null;
+  comfortable_tessitura?: object | null;
+  exercise_range?: { low: WrittenPitch; high: WrittenPitch };
+  technique?: string | null;
+  support?: object | null;
+}
+
+export interface SilabaAdn {
+  id: string;
+  text: string;
+}
+
+export interface PalabraAdn {
+  id: string;
+  text: string;
+  syllables: SilabaAdn[];
+}
+
+export interface UnidadCantada {
+  id: string;
+  syllable_ids: string[];
+  junction: string;
+  note_ids: string[];
+  melisma?: boolean;
+}
+
+export interface AlineacionTexto {
+  language: string;
+  orthographic: { text: string; words: PalabraAdn[] };
+  sung_units: UnidadCantada[];
+}
+
+export interface VarianteAdn {
+  id: string;
+  label?: string;
+  transform: Record<string, unknown>;
+}
+
+export interface EntradaEvidenciaCampo {
+  evidence: string;
+  basis: string;
+}
+
+export interface GobernanzaAdn {
+  aprobado_por_david: boolean;
+  listo_para_desarrollo: boolean;
+  validacion_profesional: string;
+  transposition_allowed: boolean;
+  unknown_notation: unknown[];
+  unsupported_features: unknown[];
+  field_evidence?: Record<string, EntradaEvidenciaCampo> | null;
+}
+
+export interface SemanticaMusical {
+  time: { signature: string; beats_per_measure: number; beat_unit: string; bpm: number; tempo_term?: string | null };
+  key?: { tonic: string; mode: string };
+  measures: number;
+  anacrusis?: object | null;
+  structure?: SeccionAdn[];
+  voices: VozAdn[];
+}
+
+export interface AdnDoc {
+  schema_version: string;
+  exercise: { id: string; title: string; source: Record<string, unknown>; evidence_default?: string };
+  musical_semantics: SemanticaMusical;
+  instrument_realization: RealizacionInstrumento;
+  text_and_vocal_alignment: AlineacionTexto | null;
+  presentation_and_rendering: {
+    type: string;
+    views: string[];
+    controls: string[];
+    bpm_initial?: number;
+    engine_suggested?: string | null;
+    hand_colors?: Record<string, string> | null;
+  };
+  variants?: VarianteAdn[];
+  evidence_governance: GobernanzaAdn;
+}
+
+// ---------- registro de identificadores basis (mapa cerrado) ----------
+
+export const VERSION_ESQUEMA = "0.2.1-draft";
+
+export const ETIQUETAS_EVIDENCIA = [
+  "[verificado]",
+  "[documentado]",
+  "[confirmado por David]",
+  "[calculado]",
+  "[ilegible]",
+  "[desconocido]",
+] as const;
+export type EtiquetaEvidencia = (typeof ETIQUETAS_EVIDENCIA)[number];
+
+const IDS_BASIS_APROBADOS = [
+  "calc.exercise.written-range.v1",
+  "calc.timeline.measure-beat.v1",
+  "doc.render.canto-views.v1",
+  "doc.render.initial-bpm.v1",
+  "doc.render.minimum-controls.v1",
+  "doc.render.reproducible-type.v1",
+  "verify.text.language.v1",
+] as const;
+
+export interface EntradaBasis {
+  id: string;
+  evidence: EtiquetaEvidencia;
+  pointer_pattern: string;
+  meaning: string;
+}
+
+export interface RegistroBasis {
+  appliesToSchemaVersion: string;
+  entradas: readonly EntradaBasis[];
+}
+
+export type ResultadoCarga =
+  | { ok: true; registro: RegistroBasis }
+  | { ok: false; detalle: string };
+
+// Inyección controlada EXCLUSIVAMENTE para pruebas. Conducta determinista:
+// - si `contenido !== undefined` (comparación estricta, no truthiness) se usa
+//   ese texto y NO se toca el disco;
+// - si no, se lee `ruta` si fue provista; si no, la ruta predeterminada,
+//   resuelta respecto de ESTE módulo (nunca respecto del cwd).
+// Prohibido para las pruebas: renombrar, borrar, sobrescribir o sustituir el
+// registro real del repositorio.
+export interface OpcionesCarga {
+  ruta?: string;
+  contenido?: string;
+  exigirOrdenAlfabetico?: boolean;
+}
+
+const RUTA_REGISTRO = path.join(__dirname, "..", "schema", "evidence-basis.v1.json");
+const METADATOS_REGISTRO = [
+  "registry",
+  "version",
+  "applies_to_schema_version",
+  "canonical_source",
+  "pointer_pattern_syntax",
+  "entry_order",
+] as const;
+// En orden alfabético, para comparar contra Object.keys(entrada).sort().
+const CAMPOS_ENTRADA = ["evidence", "id", "meaning", "pointer_pattern"] as const;
+const RE_SEGMENTO_PATRON = /^[A-Za-z0-9_.-]+$/;
+
+function esObjetoPlano(x: unknown): x is Record<string, unknown> {
+  return typeof x === "object" && x !== null && !Array.isArray(x);
+}
+
+function esEtiqueta(x: unknown): x is EtiquetaEvidencia {
+  return typeof x === "string" && (ETIQUETAS_EVIDENCIA as readonly string[]).includes(x);
+}
+
+// Gramática aprobada de los patrones del registro: ("/" token)+ con
+// token = "*" (exactamente un índice de array válido) o segmento [A-Za-z0-9_.-]+.
+// Sin "~" en ninguna forma, sin "//", sin "/" final.
+function patronValido(p: string): boolean {
+  if (!p.startsWith("/")) return false;
+  return p.slice(1).split("/").every((t) => t === "*" || RE_SEGMENTO_PATRON.test(t));
+}
+
+export function cargarRegistroBasis(op?: OpcionesCarga): ResultadoCarga {
+  const falla = (detalle: string): ResultadoCarga => ({ ok: false, detalle });
+  let texto: string;
+  if (op?.contenido !== undefined) {
+    texto = op.contenido;
+  } else {
+    const ruta = op?.ruta ?? RUTA_REGISTRO;
+    if (!fs.existsSync(ruta)) return falla(`registro ausente en ${ruta}`);
+    try {
+      texto = fs.readFileSync(ruta, "utf8");
+    } catch (e) {
+      return falla(`registro ilegible: ${e instanceof Error ? e.message : String(e)}`);
+    }
+  }
+  let crudo: unknown;
+  try {
+    crudo = JSON.parse(texto);
+  } catch (e) {
+    return falla(`JSON inválido: ${e instanceof Error ? e.message : String(e)}`);
+  }
+  if (!esObjetoPlano(crudo)) return falla("la raíz no es un objeto");
+  for (const clave of METADATOS_REGISTRO) {
+    if (typeof crudo[clave] !== "string" || crudo[clave] === "") {
+      return falla(`metadato ausente o no textual: ${clave}`);
+    }
+  }
+  if (crudo.registry !== "evidence-basis" || crudo.version !== "v1") {
+    return falla(`registro no reconocido: registry=${JSON.stringify(crudo.registry)}, version=${JSON.stringify(crudo.version)}`);
+  }
+  const aplica = crudo.applies_to_schema_version;
+  if (aplica !== VERSION_ESQUEMA) {
+    return falla(`versión de esquema incompatible: ${JSON.stringify(aplica)} (se exige ${VERSION_ESQUEMA})`);
+  }
+  const entriesCrudo = crudo.entries;
+  if (!Array.isArray(entriesCrudo)) return falla("entries no es un array");
+  const entradas: EntradaBasis[] = [];
+  for (let i = 0; i < entriesCrudo.length; i++) {
+    const e: unknown = entriesCrudo[i];
+    if (!esObjetoPlano(e)) return falla(`entrada ${i}: no es un objeto`);
+    const claves = Object.keys(e).sort();
+    if (claves.length !== CAMPOS_ENTRADA.length || claves.some((c, j) => c !== CAMPOS_ENTRADA[j])) {
+      return falla(`entrada ${i}: claves inválidas (${claves.join(", ")})`);
+    }
+    const id = e.id;
+    if (typeof id !== "string" || id === "") return falla(`entrada ${i}: id vacío o no textual`);
+    const meaning = e.meaning;
+    if (typeof meaning !== "string" || meaning === "") return falla(`entrada ${i}: meaning vacío o no textual`);
+    if (!esEtiqueta(e.evidence)) return falla(`entrada ${i}: etiqueta no permitida ${JSON.stringify(e.evidence)}`);
+    const patron = e.pointer_pattern;
+    if (typeof patron !== "string" || !patronValido(patron)) {
+      return falla(`entrada ${i}: patrón inválido ${JSON.stringify(patron)}`);
+    }
+    entradas.push({ id, evidence: e.evidence, pointer_pattern: patron, meaning });
+  }
+  const vistos = new Set<string>();
+  for (const en of entradas) {
+    if (vistos.has(en.id)) return falla(`identificador duplicado: ${en.id}`);
+    vistos.add(en.id);
+  }
+  const aprobados = new Set<string>(IDS_BASIS_APROBADOS);
+  const faltan = IDS_BASIS_APROBADOS.filter((x) => !vistos.has(x));
+  const sobran = entradas.map((x) => x.id).filter((x) => !aprobados.has(x));
+  if (faltan.length > 0 || sobran.length > 0) {
+    return falla(`conjunto de identificadores inesperado — faltan: [${faltan.join(", ")}]; sobran: [${sobran.join(", ")}]`);
+  }
+  if (op?.exigirOrdenAlfabetico ?? true) {
+    for (let i = 1; i < entradas.length; i++) {
+      if (entradas[i - 1].id > entradas[i].id) {
+        return falla(`orden no alfabético en la posición ${i} (${entradas[i].id})`);
+      }
+    }
+  }
+  return { ok: true, registro: { appliesToSchemaVersion: aplica, entradas } };
+}
+
+// ---------- punteros JSON (RFC 6901) ----------
+
+export function decodificarPuntero(puntero: string): { ok: true; tokens: string[] } | { ok: false; motivo: string } {
+  if (puntero === "") return { ok: false, motivo: "puntero vacío (la raíz queda fuera del contrato)" };
+  if (!puntero.startsWith("/")) return { ok: false, motivo: "no comienza con '/'" };
+  const tokens: string[] = [];
+  for (const bruto of puntero.slice(1).split("/")) {
+    let dec = "";
+    for (let i = 0; i < bruto.length; i++) {
+      const ch = bruto[i];
+      if (ch === "~") {
+        const sig = bruto[i + 1];
+        if (sig === "0") {
+          dec += "~";
+          i++;
+        } else if (sig === "1") {
+          dec += "/";
+          i++;
+        } else {
+          return { ok: false, motivo: `secuencia de escape inválida '~${sig ?? ""}'` };
+        }
+      } else {
+        dec += ch;
+      }
+    }
+    tokens.push(dec);
+  }
+  return { ok: true, tokens };
+}
+
+const RE_INDICE_ARRAY = /^(0|[1-9][0-9]*)$/;
+
+// Resuelve tokens YA decodificados contra el documento, descendiendo SOLO por
+// propiedades propias (hasOwnProperty); jamás por la cadena de prototipos.
+export function resolverTokens(doc: unknown, tokens: readonly string[]): { ok: true } | { ok: false; motivo: string } {
+  let actual: unknown = doc;
+  for (const t of tokens) {
+    if (Array.isArray(actual)) {
+      if (!RE_INDICE_ARRAY.test(t)) return { ok: false, motivo: `índice de array inválido '${t}'` };
+      const i = Number(t);
+      if (i >= actual.length) return { ok: false, motivo: `índice ${t} fuera de rango` };
+      actual = actual[i];
+    } else if (esObjetoPlano(actual)) {
+      if (!Object.prototype.hasOwnProperty.call(actual, t)) return { ok: false, motivo: `clave inexistente '${t}'` };
+      actual = actual[t];
+    } else {
+      return { ok: false, motivo: `no se puede descender por '${t}': el valor no es contenedor` };
+    }
+  }
+  return { ok: true };
+}
+
+export function resolverPuntero(doc: unknown, puntero: string): { ok: true; tokens: string[] } | { ok: false; motivo: string } {
+  const dec = decodificarPuntero(puntero);
+  if (!dec.ok) return dec;
+  const res = resolverTokens(doc, dec.tokens);
+  if (!res.ok) return res;
+  return { ok: true, tokens: dec.tokens };
+}
+
+// Solapamiento sobre ARRAYS DE TOKENS decodificados (nunca por prefijo
+// textual). "a_mas_especifico" = a desciende de b.
+export type Solapamiento = "ninguno" | "iguales" | "a_mas_especifico" | "b_mas_especifico";
+
+export function compararSolapamiento(a: readonly string[], b: readonly string[]): Solapamiento {
+  const n = Math.min(a.length, b.length);
+  for (let i = 0; i < n; i++) {
+    if (a[i] !== b[i]) return "ninguno";
+  }
+  if (a.length === b.length) return "iguales";
+  return a.length > b.length ? "a_mas_especifico" : "b_mas_especifico";
+}
+
+// Escapa una clave para usarla como token de instancePath (mismo formato que
+// emite ajv): primero ~ → ~0, después / → ~1.
+function escaparTokenPuntero(clave: string): string {
+  return clave.replace(/~/g, "~0").replace(/\//g, "~1");
+}
+
+function coincidePatron(tokens: readonly string[], patron: string): boolean {
+  const pt = patron.slice(1).split("/");
+  if (pt.length !== tokens.length) return false;
+  return pt.every((p, i) => (p === "*" ? RE_INDICE_ARRAY.test(tokens[i]) : p === tokens[i]));
+}
+
 // ---------- validación semántica ----------
 
-export function validarSemantica(adn: any): string[] {
+export function validarSemantica(adn: AdnDoc, registro: RegistroBasis): string[] {
   const errores: string[] = [];
   const sem = adn.musical_semantics;
   const bu = parseFrac(sem.time.beat_unit);
   const durCompas = mul(frac(sem.time.beats_per_measure, 1), bu);
 
-  const notasPorId = new Map<string, any>();
-  for (const voz of sem.voices) {
-    for (const ev of voz.events) {
-      for (const n of ev.notes ?? []) notasPorId.set(n.id, n);
-    }
-  }
+  // B-1: unicidad de identificadores musicales (event.id y note.id GLOBALES)
+  const notasPorId = new Map<string, NotaAdn>();
+  const idsVoz = new Set<string>();
+  const idsEvento = new Set<string>();
+  sem.voices.forEach((voz, vi) => {
+    if (idsVoz.has(voz.id)) errores.push(`/musical_semantics/voices/${vi}/id: duplicado ${voz.id}`);
+    idsVoz.add(voz.id);
+    voz.events.forEach((ev, ei) => {
+      if (idsEvento.has(ev.id)) errores.push(`/musical_semantics/voices/${vi}/events/${ei}/id: duplicado ${ev.id}`);
+      idsEvento.add(ev.id);
+      (ev.notes ?? []).forEach((n, ni) => {
+        if (notasPorId.has(n.id)) {
+          errores.push(`/musical_semantics/voices/${vi}/events/${ei}/notes/${ni}/id: duplicado ${n.id}`);
+        }
+        notasPorId.set(n.id, n);
+      });
+    });
+  });
+  const idsVariante = new Set<string>();
+  (adn.variants ?? []).forEach((v, i) => {
+    if (idsVariante.has(v.id)) errores.push(`/variants/${i}/id: duplicado ${v.id}`);
+    idsVariante.add(v.id);
+  });
 
+  // Ritmo: suma por compás y continuidad temporal (sin cambios)
   for (const voz of sem.voices) {
-    const porCompas = new Map<number, any[]>();
+    const porCompas = new Map<number, EventoAdn[]>();
     for (const ev of voz.events) {
       if (ev.measure > sem.measures) {
         errores.push(`voz ${voz.id}: evento ${ev.id} en compás ${ev.measure} > measures=${sem.measures}`);
@@ -108,20 +515,82 @@ export function validarSemantica(adn: any): string[] {
     }
   }
 
-  // (c) + (d) realización instrumental
-  const real = adn.instrument_realization;
-  if (real && real.kind === "guitar") {
-    const asignadas = new Set<string>();
-    for (const r of real.realizations) {
-      if (!notasPorId.has(r.note_id)) {
-        errores.push(`guitarra: realización de note_id inexistente ${r.note_id}`);
+  // B-1/B-3/B-5: estructura — roles únicos, measures en rango y sin repetidos,
+  // repeats resoluble, sin autorreferencia y sin ciclos
+  const estructura = sem.structure ?? [];
+  const rolesVistos = new Set<string>();
+  estructura.forEach((s, i) => {
+    if (rolesVistos.has(s.role)) errores.push(`/musical_semantics/structure/${i}/role: duplicado ${s.role}`);
+    rolesVistos.add(s.role);
+    const compasesVistos = new Set<number>();
+    for (const m of s.measures) {
+      if (m < 1 || m > sem.measures) {
+        errores.push(`/musical_semantics/structure/${i}/measures: fuera de rango ${m} (measures=${sem.measures})`);
       }
-      asignadas.add(r.note_id);
+      if (compasesVistos.has(m)) errores.push(`/musical_semantics/structure/${i}/measures: compás repetido ${m}`);
+      compasesVistos.add(m);
+    }
+  });
+  const indicePorRole = new Map<string, number>();
+  estructura.forEach((s, i) => {
+    if (!indicePorRole.has(s.role)) indicePorRole.set(s.role, i);
+  });
+  const enCicloReportado = new Set<number>();
+  estructura.forEach((s, i) => {
+    if (s.repeats === undefined) return;
+    if (!indicePorRole.has(s.repeats)) {
+      errores.push(`/musical_semantics/structure/${i}/repeats: role inexistente ${s.repeats}`);
+      enCicloReportado.add(i);
+      return;
+    }
+    if (s.repeats === s.role) {
+      errores.push(`/musical_semantics/structure/${i}/repeats: autorreferencia ${s.role}`);
+      enCicloReportado.add(i);
+    }
+  });
+  estructura.forEach((s, i) => {
+    if (s.repeats === undefined || enCicloReportado.has(i)) return;
+    const cadena = new Set<number>();
+    let j: number | undefined = i;
+    while (j !== undefined) {
+      if (cadena.has(j)) {
+        errores.push(`/musical_semantics/structure/${i}/repeats: ciclo detectado (${s.repeats})`);
+        for (const k of cadena) enCicloReportado.add(k);
+        return;
+      }
+      if (j !== i && enCicloReportado.has(j)) return; // desemboca en algo ya reportado
+      cadena.add(j);
+      const rep: string | undefined = estructura[j].repeats;
+      if (rep === undefined || rep === estructura[j].role) return;
+      j = indicePorRole.get(rep);
+    }
+  });
+
+  // B-4: realizaciones de guitarra Y piano — note_id existente, cobertura
+  // total y EXACTAMENTE una realización por note_id
+  const real = adn.instrument_realization;
+  if ((real.kind === "guitar" || real.kind === "piano") && real.realizations) {
+    const conteo = new Map<string, number>();
+    real.realizations.forEach((r, i) => {
+      if (!notasPorId.has(r.note_id)) {
+        errores.push(`/instrument_realization/realizations/${i}: note_id inexistente ${r.note_id}`);
+      }
+      const c = (conteo.get(r.note_id) ?? 0) + 1;
+      conteo.set(r.note_id, c);
+      if (c > 1) errores.push(`/instrument_realization/realizations/${i}: note_id repetido ${r.note_id}`);
+    });
+    for (const [id] of notasPorId) {
+      if (!conteo.has(id)) errores.push(`/instrument_realization/realizations: falta realización para note_id ${id}`);
+    }
+  }
+  // (c)+(d) guitarra: correspondencia altura ↔ cuerda/traste (sin cambios)
+  if (real.kind === "guitar" && real.realizations) {
+    for (const r of real.realizations) {
       const objetivo = notasPorId.get(r.note_id);
-      if (objetivo) {
+      if (objetivo && typeof r.string === "number" && typeof r.fret === "number") {
         const posiciones = [
           { string: r.string, fret: r.fret, rot: "principal" },
-          ...(r.alternatives ?? []).map((a: any, i: number) => ({ string: a.string, fret: a.fret, rot: `alternativa ${i + 1}` })),
+          ...(r.alternatives ?? []).map((a, i) => ({ string: a.string, fret: a.fret, rot: `alternativa ${i + 1}` })),
         ];
         for (const p of posiciones) {
           const esperado = midiOf(objetivo.written_pitch);
@@ -132,12 +601,9 @@ export function validarSemantica(adn: any): string[] {
         }
       }
     }
-    for (const [id] of notasPorId) {
-      if (!asignadas.has(id)) errores.push(`guitarra: nota melódica ${id} sin realización`);
-    }
   }
-  // (e) rango vocal
-  if (real && real.kind === "voice") {
+  // (e) rango vocal (sin cambios)
+  if (real.kind === "voice" && real.exercise_range) {
     const lo = midiOf(real.exercise_range.low);
     const hi = midiOf(real.exercise_range.high);
     for (const [id, n] of notasPorId) {
@@ -148,22 +614,37 @@ export function validarSemantica(adn: any): string[] {
     }
   }
 
-  // (f) alineación texto-voz
+  // (f) alineación texto-voz + B-2 unicidad de ids de texto + B-6 sílabas
   const ali = adn.text_and_vocal_alignment;
   if (ali) {
-    const silabas = new Set<string>();
-    for (const w of ali.orthographic.words) {
-      for (const s of w.syllables) silabas.add(s.id);
-    }
+    const idsPalabra = new Set<string>();
+    const idsSilabaDecl = new Set<string>();
+    ali.orthographic.words.forEach((w, wi) => {
+      if (idsPalabra.has(w.id)) errores.push(`/text_and_vocal_alignment/orthographic/words/${wi}/id: duplicado ${w.id}`);
+      idsPalabra.add(w.id);
+      w.syllables.forEach((sil, si) => {
+        if (idsSilabaDecl.has(sil.id)) {
+          errores.push(`/text_and_vocal_alignment/orthographic/words/${wi}/syllables/${si}/id: duplicado ${sil.id}`);
+        }
+        idsSilabaDecl.add(sil.id);
+      });
+    });
+    const idsUnidad = new Set<string>();
     const usoSilaba = new Map<string, number>();
     const usoNota = new Map<string, number>();
-    for (const u of ali.sung_units) {
+    ali.sung_units.forEach((u, ui) => {
+      if (idsUnidad.has(u.id)) errores.push(`/text_and_vocal_alignment/sung_units/${ui}/id: duplicado ${u.id}`);
+      idsUnidad.add(u.id);
       for (const sid of u.syllable_ids) {
-        if (!silabas.has(sid)) errores.push(`alineación: unidad ${u.id} usa sílaba inexistente ${sid}`);
+        if (!idsSilabaDecl.has(sid)) {
+          errores.push(`/text_and_vocal_alignment/sung_units/${ui}/syllable_ids: sílaba inexistente ${sid}`);
+        }
         usoSilaba.set(sid, (usoSilaba.get(sid) ?? 0) + 1);
       }
       for (const nid of u.note_ids) {
-        if (!notasPorId.has(nid)) errores.push(`alineación: unidad ${u.id} usa nota inexistente ${nid}`);
+        if (!notasPorId.has(nid)) {
+          errores.push(`/text_and_vocal_alignment/sung_units/${ui}/note_ids: nota inexistente ${nid}`);
+        }
         usoNota.set(nid, (usoNota.get(nid) ?? 0) + 1);
       }
       if (u.note_ids.length > 1 && u.melisma !== true) {
@@ -172,19 +653,94 @@ export function validarSemantica(adn: any): string[] {
       if ((u.junction === "sinalefa" || u.junction === "sineresis") && u.syllable_ids.length < 2) {
         errores.push(`alineación: unidad ${u.id} declara ${u.junction} con menos de 2 sílabas`);
       }
+    });
+    for (const [sid, c] of usoSilaba) {
+      if (c > 1) errores.push(`/text_and_vocal_alignment/sung_units: sílaba ${sid} usada ${c} veces`);
     }
-    for (const [sid, c] of usoSilaba) if (c > 1) errores.push(`alineación: sílaba ${sid} usada ${c} veces`);
-    for (const [nid, c] of usoNota) if (c > 1) errores.push(`alineación: nota ${nid} asignada a ${c} unidades`);
+    for (const sid of idsSilabaDecl) {
+      if (!usoSilaba.has(sid)) errores.push(`/text_and_vocal_alignment/orthographic: sílaba ${sid} declarada y nunca usada`);
+    }
+    for (const [nid, c] of usoNota) {
+      if (c > 1) errores.push(`alineación: nota ${nid} asignada a ${c} unidades`);
+    }
     for (const [nid] of notasPorId) {
       if (!usoNota.has(nid)) errores.push(`alineación: nota melódica ${nid} sin sílaba asignada`);
     }
   }
 
-  // (g) gobernanza: transposición
+  // (g) gobernanza: transposición (sin cambios)
   for (const v of adn.variants ?? []) {
     const claves = Object.keys(v.transform ?? {});
     if (claves.some((k) => k.includes("transpose")) && adn.evidence_governance.transposition_allowed !== true) {
       errores.push(`gobernanza: la variante ${v.id} transpone pero transposition_allowed es false`);
+    }
+  }
+
+  // B-7: procedencia por dato (field_evidence) contra el mapa cerrado.
+  // Por entrada se reporta SOLO la primera falla (una incidencia por ruta).
+  const fe = adn.evidence_governance.field_evidence;
+  if (fe !== undefined && fe !== null) {
+    const porBasis = new Map<string, EntradaBasis>();
+    for (const en of registro.entradas) porBasis.set(en.id, en);
+    const claves = Object.keys(fe);
+    const rutaDe = (clave: string): string => `/evidence_governance/field_evidence/${escaparTokenPuntero(clave)}`;
+    const decodificadas = new Map<string, string[]>();
+    const excluidas = new Set<string>();
+    for (const clave of claves) {
+      const dec = decodificarPuntero(clave);
+      if (dec.ok) {
+        decodificadas.set(clave, dec.tokens);
+      } else {
+        errores.push(`${rutaDe(clave)}: puntero inválido — ${dec.motivo}`);
+        excluidas.add(clave);
+      }
+    }
+    // Solapamiento padre/hijo entre punteros decodificados: se reporta
+    // determinísticamente el MÁS ESPECÍFICO y queda excluido del resto.
+    const clavesDec = claves.filter((c) => decodificadas.has(c));
+    for (let i = 0; i < clavesDec.length; i++) {
+      for (let j = i + 1; j < clavesDec.length; j++) {
+        const a = clavesDec[i];
+        const bb = clavesDec[j];
+        if (excluidas.has(a) || excluidas.has(bb)) continue;
+        const rel = compararSolapamiento(decodificadas.get(a) ?? [], decodificadas.get(bb) ?? []);
+        if (rel === "a_mas_especifico") {
+          errores.push(`${rutaDe(a)}: solapa con ${bb} (se prohíbe el solapamiento padre/hijo)`);
+          excluidas.add(a);
+        } else if (rel === "b_mas_especifico") {
+          errores.push(`${rutaDe(bb)}: solapa con ${a} (se prohíbe el solapamiento padre/hijo)`);
+          excluidas.add(bb);
+        }
+      }
+    }
+    for (const clave of claves) {
+      if (excluidas.has(clave)) continue;
+      const tokens = decodificadas.get(clave);
+      if (!tokens) continue;
+      const ruta = rutaDe(clave);
+      if (tokens.length >= 2 && tokens[0] === "evidence_governance" && tokens[1] === "field_evidence") {
+        errores.push(`${ruta}: el puntero apunta a field_evidence o a un descendiente suyo`);
+        continue;
+      }
+      const res = resolverTokens(adn, tokens);
+      if (!res.ok) {
+        errores.push(`${ruta}: el puntero no resuelve — ${res.motivo}`);
+        continue;
+      }
+      const entrada = fe[clave];
+      const reg = porBasis.get(entrada.basis);
+      if (!reg) {
+        // El enum del esquema lo impide; defensa explícita ante desincronía.
+        errores.push(`${ruta}: basis no registrado ${entrada.basis}`);
+        continue;
+      }
+      if (entrada.evidence !== reg.evidence) {
+        errores.push(`${ruta}: la etiqueta ${entrada.evidence} no corresponde — ${reg.id} exige ${reg.evidence}`);
+        continue;
+      }
+      if (!coincidePatron(tokens, reg.pointer_pattern)) {
+        errores.push(`${ruta}: el puntero no encaja en el patrón ${reg.pointer_pattern} de ${reg.id}`);
+      }
     }
   }
 
@@ -193,36 +749,49 @@ export function validarSemantica(adn: any): string[] {
 
 // ---------- validación estructural + total ----------
 
-let validadorEstructural: (((data: unknown) => boolean) & { errors?: any }) | null = null;
+let validadorEstructural: ValidateFunction | null = null;
 
-function compilarSchema() {
+function compilarSchema(): ValidateFunction {
   if (validadorEstructural) return validadorEstructural;
   const rutaSchema = path.join(__dirname, "..", "schema", "adn-musical.schema.json");
-  const schema = JSON.parse(fs.readFileSync(rutaSchema, "utf8"));
+  // Única aserción de esquema del módulo: el archivo es el contrato del repo.
+  const schema = JSON.parse(fs.readFileSync(rutaSchema, "utf8")) as AnySchema;
   const ajv = new Ajv2020({ allErrors: true, strict: false });
-  validadorEstructural = ajv.compile(schema) as any;
-  return validadorEstructural!;
+  validadorEstructural = ajv.compile(schema);
+  return validadorEstructural;
 }
 
-export function validarData(data: any): string[] {
+// Compuerta B completa. `opcionesCarga` existe EXCLUSIVAMENTE para las
+// pruebas del cargador del registro (inyección de ruta o de contenido); la
+// ejecución normal y la CLI llaman validarData(data) sin segundo argumento y
+// resuelven el registro por la ruta predeterminada relativa a este módulo.
+// Si el registro no supera su validación íntegra, la compuerta falla cerrada:
+// devuelve UNA única incidencia operational_error/registro_basis y no ejecuta
+// ni la fase estructural ni la semántica.
+export function validarData(data: unknown, opcionesCarga?: OpcionesCarga): string[] {
+  const carga = cargarRegistroBasis(opcionesCarga);
+  if (!carga.ok) return [`operational_error/registro_basis: ${carga.detalle}`];
   const errores: string[] = [];
   const validar = compilarSchema();
   if (!validar(data)) {
-    for (const err of (validar as any).errors ?? []) {
+    const errsAjv: ErrorObject[] = validar.errors ?? [];
+    for (const err of errsAjv) {
       errores.push(`estructural ${err.instancePath || "/"}: ${err.message}`);
     }
     return errores; // sin estructura válida no se corre la semántica
   }
-  errores.push(...validarSemantica(data));
+  // Única aserción de tipo sobre datos: ajv acaba de garantizar la forma.
+  const adn = data as AdnDoc;
+  errores.push(...validarSemantica(adn, carga.registro));
   return errores;
 }
 
 export function validarArchivo(ruta: string): { ok: boolean; errores: string[] } {
-  let data: any;
+  let data: unknown;
   try {
     data = JSON.parse(fs.readFileSync(ruta, "utf8"));
-  } catch (e: any) {
-    return { ok: false, errores: [`JSON inválido: ${e.message}`] };
+  } catch (e) {
+    return { ok: false, errores: [`JSON inválido: ${e instanceof Error ? e.message : String(e)}`] };
   }
   const errores = validarData(data);
   return { ok: errores.length === 0, errores };
