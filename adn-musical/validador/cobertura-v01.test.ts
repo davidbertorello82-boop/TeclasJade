@@ -7,9 +7,9 @@
 // Grupos: A históricos (34) · B positivos (3) · C gobernanza A2 (2) ·
 // D unicidad (9) · E referencias (5) · F realizaciones (6) · G estructura (2) ·
 // H texto (2) · I defensivos (4) · J field_evidence forma (7) · K mapa
-// cerrado (25) · L cargador del registro (19) · R resolvedor RFC 6901 (14) ·
-// S solapamiento (3) · V versión única (5) · W sincronización (6) ·
-// X migración (5). Total: 151.
+// cerrado con contexto instrumental (33) · L cargador del registro v2 (22) ·
+// R resolvedor RFC 6901 (14) · S solapamiento (3) · V versión única (5) ·
+// W sincronización (7) · X migración (5) · Y exercise_range (4). Total: 167.
 // Uso: npm run test:cobertura-adn — exit 0 solo si TODOS los casos pasan.
 
 import * as fs from "node:fs";
@@ -33,7 +33,7 @@ const rutas = {
   cp: path.join(BASE, "conformance", "conformance-piano.json"),
 };
 const rutaEsperado = path.join(BASE, "pruebas", "inedito-01", "esperado.json");
-const rutaRegistro = path.join(BASE, "schema", "evidence-basis.v1.json");
+const rutaRegistro = path.join(BASE, "schema", "evidence-basis.v2.json");
 const rutaSchema = path.join(BASE, "schema", "adn-musical.schema.json");
 const rutaSkill = path.join(BASE, "skill", "adn-musical-compilador", "SKILL.md");
 
@@ -580,6 +580,55 @@ for (const [, etiqueta, basis] of ACEPTACIONES) {
   );
 }
 
+// ---------- K. basis de piano y contexto instrumental (registro v2) ----------
+
+const cpBase = cargar(rutas.cp);
+function cpConFe(fe: unknown): AdnDoc {
+  const d = copia(cpBase);
+  (d.evidence_governance as unknown as Record<string, unknown>).field_evidence = fe;
+  return d;
+}
+{
+  const d = cpConFe({ "/presentation_and_rendering/views": { evidence: "[documentado]", basis: "doc.render.piano-views.v1" } });
+  caso("K aceptación: doc.render.piano-views.v1 sobre ADN de piano", b(d).length === 0, b(d).join(" | "));
+}
+{
+  const d = cpConFe({ "/presentation_and_rendering/hand_colors": { evidence: "[documentado]", basis: "doc.render.piano-hand-colors.v1" } });
+  caso("K aceptación: doc.render.piano-hand-colors.v1 sobre ADN de piano", b(d).length === 0, b(d).join(" | "));
+}
+{
+  const d = cpConFe({ "/presentation_and_rendering/views": { evidence: "[calculado]", basis: "doc.render.piano-views.v1" } });
+  caso("K etiqueta incorrecta: [calculado] para doc.render.piano-views.v1", rutaExacta(b(d), rutaFe("/presentation_and_rendering/views")), b(d).join(" | "));
+}
+{
+  const d = cpConFe({ "/presentation_and_rendering/hand_colors": { evidence: "[calculado]", basis: "doc.render.piano-hand-colors.v1" } });
+  caso("K etiqueta incorrecta: [calculado] para doc.render.piano-hand-colors.v1", rutaExacta(b(d), rutaFe("/presentation_and_rendering/hand_colors")), b(d).join(" | "));
+}
+{
+  const d = cpConFe({ "/presentation_and_rendering/type": { evidence: "[documentado]", basis: "doc.render.piano-views.v1" } });
+  caso("K puntero incompatible para doc.render.piano-views.v1", rutaExacta(b(d), rutaFe("/presentation_and_rendering/type")), b(d).join(" | "));
+}
+{
+  const d = cpConFe({ "/presentation_and_rendering/controls": { evidence: "[documentado]", basis: "doc.render.piano-hand-colors.v1" } });
+  caso("K puntero incompatible para doc.render.piano-hand-colors.v1", rutaExacta(b(d), rutaFe("/presentation_and_rendering/controls")), b(d).join(" | "));
+}
+{
+  const d = cpConFe({ "/presentation_and_rendering/views": { evidence: "[documentado]", basis: "doc.render.canto-views.v1" } });
+  caso(
+    "K contexto: canto-views citado en ADN de piano → rechazado",
+    rutaExacta(b(d), rutaFe("/presentation_and_rendering/views")) && tiene(b(d), "contexto instrumental"),
+    b(d).join(" | "),
+  );
+}
+{
+  const d = conFe({ "/presentation_and_rendering/views": { evidence: "[documentado]", basis: "doc.render.piano-views.v1" } });
+  caso(
+    "K contexto: piano-views citado en ADN de canto → rechazado",
+    rutaExacta(b(d), rutaFe("/presentation_and_rendering/views")) && tiene(b(d), "contexto instrumental"),
+    b(d).join(" | "),
+  );
+}
+
 // ---------- L. cargador del registro (fallo cerrado, 19 casos) ----------
 
 const textoRegistroReal = fs.readFileSync(rutaRegistro, "utf8");
@@ -710,7 +759,7 @@ const detalleDe = (c: ReturnType<typeof cargarRegistroBasis>): string => (c.ok ?
 }
 {
   const r = nuevoRegistro();
-  entradasDe(r).push({ id: "doc.render.zz-extra.v1", evidence: "[documentado]", pointer_pattern: "/x", meaning: "extra" });
+  entradasDe(r).push({ id: "doc.render.zz-extra.v1", evidence: "[documentado]", instrument_kind: null, pointer_pattern: "/x", meaning: "extra" });
   const carga = conContenido(r);
   caso(
     "L18: identificador ajeno al conjunto aprobado",
@@ -720,12 +769,34 @@ const detalleDe = (c: ReturnType<typeof cargarRegistroBasis>): string => (c.ok ?
 }
 {
   const r = nuevoRegistro();
+  r.version = "v1";
+  const carga = conContenido(r);
+  caso("L19: registro version v1 rechazado (se exige v2)", !carga.ok && carga.detalle.includes("versión de registro incompatible"), detalleDe(carga));
+}
+{
+  const r = nuevoRegistro();
+  delete r.instrument_kind_semantics;
+  const carga = conContenido(r);
+  caso(
+    "L20: instrument_kind_semantics ausente rechazado",
+    !carga.ok && carga.detalle.includes("metadato ausente o no textual: instrument_kind_semantics"),
+    detalleDe(carga),
+  );
+}
+{
+  const r = nuevoRegistro();
+  entradasDe(r)[0].instrument_kind = "drums";
+  const carga = conContenido(r);
+  caso("L21: instrument_kind inválido rechazado", !carga.ok && carga.detalle.includes("instrument_kind no permitido"), detalleDe(carga));
+}
+{
+  const r = nuevoRegistro();
   const es = entradasDe(r);
   const tmp = es[0];
   es[0] = es[1];
   es[1] = tmp;
   const carga = conContenido(r);
-  caso("L19: orden no alfabético rechazado", !carga.ok && carga.detalle.includes("orden no alfabético"), detalleDe(carga));
+  caso("L22: orden no alfabético rechazado", !carga.ok && carga.detalle.includes("orden no alfabético"), detalleDe(carga));
 }
 
 // ---------- R. unitarias del resolvedor RFC 6901 ----------
@@ -755,9 +826,9 @@ caso("S3: ['a','b'] y ['a','b','c'] solapan y el más específico es el segundo"
 
 {
   const d = copia(cargar(rutas.p1));
-  caso("V1: 0.2.1-draft es la versión aceptada", d.schema_version === "0.2.1-draft" && b(d).length === 0, `${d.schema_version} | ${b(d).join(" | ")}`);
+  caso("V1: 0.2.2-draft es la versión aceptada", d.schema_version === "0.2.2-draft" && b(d).length === 0, `${d.schema_version} | ${b(d).join(" | ")}`);
 }
-for (const mala of ["0.2.0-draft", "0.2.0", "0.2.1", "0.3.0-draft"]) {
+for (const mala of ["0.2.1-draft", "0.2.0-draft", "0.2.2", "0.3.0-draft"]) {
   const d = copia(cargar(rutas.p1));
   d.schema_version = mala;
   caso(`V: schema_version ${mala} rechazada`, rutaEstructural(b(d), "/schema_version"), b(d).join(" | "));
@@ -779,12 +850,12 @@ for (const mala of ["0.2.0-draft", "0.2.0", "0.2.1", "0.3.0-draft"]) {
   );
 
   const skillTexto = fs.readFileSync(rutaSkill, "utf8");
-  const filas = [...skillTexto.matchAll(/^\|\s*`([a-z0-9.\-]+)`\s*\|\s*`(\[[^\]]+\])`\s*\|\s*`([^`]+)`\s*\|\s*$/gm)]
-    .map((m) => ({ id: m[1], evidence: m[2], patron: m[3] }));
+  const filas = [...skillTexto.matchAll(/^\|\s*`([a-z0-9.\-]+)`\s*\|\s*`(\[[^\]]+\])`\s*\|\s*`([^`]+)`\s*\|\s*`(none|voice|guitar|piano|null)`\s*\|\s*$/gm)]
+    .map((m) => ({ id: m[1], evidence: m[2], patron: m[3], contexto: m[4] }));
   const porIdSkill = new Map(filas.map((f) => [f.id, f]));
   caso(
     "W2: identificadores de la tabla ejecutable del SKILL == registro",
-    carga.ok && filas.length === 7 && idsRegistro.every((id) => porIdSkill.has(id)),
+    carga.ok && filas.length === 9 && idsRegistro.every((id) => porIdSkill.has(id)),
     `filas=${filas.length} [${filas.map((f) => f.id).join(",")}]`,
   );
   caso(
@@ -798,8 +869,8 @@ for (const mala of ["0.2.0-draft", "0.2.0", "0.2.1", "0.3.0-draft"]) {
     entradasReg.map((e) => `${e.id}:${porIdSkill.get(e.id)?.patron ?? "?"}`).join(" "),
   );
   caso(
-    "W5: registro real con 7 entradas, orden alfabético y 4 campos exactos",
-    carga.ok && entradasReg.length === 7,
+    "W5: registro real con 9 entradas, orden alfabético y 5 campos exactos",
+    carga.ok && entradasReg.length === 9,
     detalleDe(carga),
   );
   const constVersion = ((schemaJson.properties as Record<string, unknown>).schema_version as Record<string, unknown>).const;
@@ -808,13 +879,50 @@ for (const mala of ["0.2.0-draft", "0.2.0", "0.2.1", "0.3.0-draft"]) {
     carga.ok && carga.registro.appliesToSchemaVersion === constVersion,
     `registro=${carga.ok ? carga.registro.appliesToSchemaVersion : "?"} esquema=${String(constVersion)}`,
   );
+  caso(
+    "W7: contextos instrumentales de la tabla ejecutable del SKILL == registro",
+    carga.ok && entradasReg.every((e) => (porIdSkill.get(e.id)?.contexto ?? "?") === (e.instrument_kind === null ? "null" : e.instrument_kind)),
+    entradasReg.map((e) => `${e.id}:${porIdSkill.get(e.id)?.contexto ?? "?"}`).join(" "),
+  );
 }
 
 // ---------- X. migración declarada a 0.2.1-draft ----------
 
 for (const rutaDoc of Object.values(rutas)) {
   const d = cargar(rutaDoc);
-  caso(`X: ${path.basename(rutaDoc)} declara 0.2.1-draft`, d.schema_version === "0.2.1-draft", d.schema_version);
+  caso(`X: ${path.basename(rutaDoc)} declara 0.2.2-draft`, d.schema_version === "0.2.2-draft", d.schema_version);
+}
+
+// ---------- Y. exercise_range: cálculo automático con cotas alcanzadas ----------
+
+{
+  const d = copia(cargar(rutas.cp));
+  d.instrument_realization.exercise_range = {
+    low: { step: "C", alter: 0, octave: 4 },
+    high: { step: "F", alter: 0, octave: 4 },
+  };
+  caso("Y1: piano con exercise_range exacto pasa B", b(d).length === 0, b(d).join(" | "));
+}
+{
+  const d = copia(cargar(rutas.cp));
+  d.instrument_realization.exercise_range = {
+    low: { step: "C", alter: 0, octave: 4 },
+    high: { step: "E", alter: 0, octave: 4 },
+  };
+  caso("Y2: piano con nota fuera del rango rechazado", rutaExacta(b(d), "/instrument_realization/exercise_range"), b(d).join(" | "));
+}
+{
+  const d = copia(cargar(rutas.cp));
+  d.instrument_realization.exercise_range = {
+    low: { step: "B", alter: 0, octave: 3 },
+    high: { step: "F", alter: 0, octave: 4 },
+  };
+  caso("Y3: cota inferior no alcanzada rechazada (piano)", rutaExacta(b(d), "/instrument_realization/exercise_range/low"), b(d).join(" | "));
+}
+{
+  const d = copia(cargar(rutaEsperado));
+  req(d.instrument_realization.exercise_range, "exercise_range").high = { step: "F", alter: 0, octave: 4 };
+  caso("Y4: cota superior no alcanzada rechazada (voz)", rutaExacta(b(d), "/instrument_realization/exercise_range/high"), b(d).join(" | "));
 }
 
 console.log("");

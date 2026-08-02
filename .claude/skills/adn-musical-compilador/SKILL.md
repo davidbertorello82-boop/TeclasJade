@@ -37,8 +37,9 @@ salidas completas.
 Antes de compilar por primera vez en una sesión, leé:
 
 1. `adn-musical/schema/adn-musical.schema.json` — el contrato (repo técnico) —
-   y `adn-musical/schema/evidence-basis.v1.json` — el registro de
-   identificadores `basis` para la procedencia por dato (§3-bis).
+   y `adn-musical/schema/evidence-basis.v2.json` — el registro de
+   identificadores `basis` con contexto instrumental (§3-bis); v1 queda como
+   antecedente histórico y no se usa en ejecución.
 2. `adn-musical/fixtures/*.json` (pilotos canónicos, copias del vault) y
    `adn-musical/conformance/*.json` (fixtures técnicos de conformidad) — tu
    referencia de estructura y estilo. La carpeta `adn-musical/pruebas/` NO es
@@ -47,7 +48,7 @@ Antes de compilar por primera vez en una sesión, leé:
    Audio/`): `🧭 Arquitectura del Compilador de ADN Musical v0.2.md`,
    `📋 Decisiones del Compilador de ADN Musical — 2026-07.md` y
    `📐 Decisión — Formato técnico del ADN musical.md`. Ahí vive también el
-   registro canónico `evidence-basis.v1.json`; el del repo es su copia
+   registro canónico `evidence-basis.v2.json`; el del repo es su copia
    ejecutable derivada.
 
 Herramientas obligatorias (desde la raíz del repo técnico): `npm run validar-adn`
@@ -222,33 +223,41 @@ de un dato concreto difiera de ese valor, se registra en
 Tampoco llevan entrada los `null` que solo declaran ausencia ni las listas de
 incidencias vacías.
 
-**Copia ejecutable derivada del registro** (canónico: el vault; ante
-divergencia manda el vault). Cada identificador fija su etiqueta obligatoria y
-el puntero o patrón sobre el que puede aparecer (`*` = exactamente un índice de
-array válido). La Compuerta B aplica este mapa cerrado entero; los prefijos
-`calc.` / `doc.` / `verify.` son descriptivos, no autoridad:
+**Copia ejecutable derivada del registro v2** (canónico: el vault; ante
+divergencia manda el vault). Cada identificador fija su etiqueta obligatoria,
+su **contexto instrumental** (`null` = cualquier realización; un valor exige
+que coincida con `instrument_realization.kind` — la Compuerta B rechaza el uso
+cruzado) y el puntero o patrón sobre el que puede aparecer (`*` = exactamente
+un índice de array válido). La Compuerta B aplica este mapa cerrado entero;
+los prefijos `calc.` / `doc.` / `verify.` son descriptivos, no autoridad:
 
-| Identificador | Etiqueta | Puntero o patrón |
-|---|---|---|
-| `calc.exercise.written-range.v1` | `[calculado]` | `/instrument_realization/exercise_range` |
-| `calc.timeline.measure-beat.v1` | `[calculado]` | `/musical_semantics/voices/*/events/*/beat` |
-| `doc.render.canto-views.v1` | `[documentado]` | `/presentation_and_rendering/views` |
-| `doc.render.initial-bpm.v1` | `[documentado]` | `/presentation_and_rendering/bpm_initial` |
-| `doc.render.minimum-controls.v1` | `[documentado]` | `/presentation_and_rendering/controls` |
-| `doc.render.reproducible-type.v1` | `[documentado]` | `/presentation_and_rendering/type` |
-| `verify.text.language.v1` | `[verificado]` | `/text_and_vocal_alignment/language` |
+| Identificador | Etiqueta | Puntero o patrón | Contexto |
+|---|---|---|---|
+| `calc.exercise.written-range.v1` | `[calculado]` | `/instrument_realization/exercise_range` | `null` |
+| `calc.timeline.measure-beat.v1` | `[calculado]` | `/musical_semantics/voices/*/events/*/beat` | `null` |
+| `doc.render.canto-views.v1` | `[documentado]` | `/presentation_and_rendering/views` | `voice` |
+| `doc.render.initial-bpm.v1` | `[documentado]` | `/presentation_and_rendering/bpm_initial` | `null` |
+| `doc.render.minimum-controls.v1` | `[documentado]` | `/presentation_and_rendering/controls` | `null` |
+| `doc.render.piano-hand-colors.v1` | `[documentado]` | `/presentation_and_rendering/hand_colors` | `piano` |
+| `doc.render.piano-views.v1` | `[documentado]` | `/presentation_and_rendering/views` | `piano` |
+| `doc.render.reproducible-type.v1` | `[documentado]` | `/presentation_and_rendering/type` | `null` |
+| `verify.text.language.v1` | `[verificado]` | `/text_and_vocal_alignment/language` | `null` |
 
 **Regla operativa:** al compilar, TODO campo del ADN cuyo puntero encaje en un
 patrón del registro y cuyo valor NO sea transcripción de la fuente lleva su
-entrada en `field_evidence` con la etiqueta y el `basis` del registro. En
-particular: cada `beat` calculado por acumulación lleva su entrada
-(`calc.timeline.measure-beat.v1`: 1 más la suma de las duraciones anteriores de
-esa misma voz en ese compás divididas por `beat_unit`, reiniciando en 1 al
-cambiar de compás); el `exercise_range` calculado recorriendo todas las voces
-lleva la suya; el idioma comprobado contra el texto fuente lleva
-`verify.text.language.v1`; y `type`, `views`, `controls` y `bpm_initial`,
-cuando salen de decisiones canónicas del vault y no de la fuente, llevan sus
-`doc.render.*`.
+entrada en `field_evidence` con la etiqueta y el `basis` del registro,
+respetando el contexto instrumental. En particular: cada `beat` calculado por
+acumulación lleva su entrada (`calc.timeline.measure-beat.v1`: 1 más la suma de
+las duraciones anteriores de esa misma voz en ese compás divididas por
+`beat_unit`, reiniciando en 1 al cambiar de compás); el `exercise_range`
+calculado recorriendo todas las voces lleva la suya; el idioma comprobado
+contra el texto fuente lleva `verify.text.language.v1`; y `type`, `views`,
+`controls` y `bpm_initial`, cuando salen de decisiones canónicas del vault y no
+de la fuente, llevan sus `doc.render.*`. En piano: las vistas llevan
+`doc.render.piano-views.v1`, los colores de mano
+`doc.render.piano-hand-colors.v1`, y el `exercise_range` — también en piano —
+es `[calculado]` automático con `calc.exercise.written-range.v1`; nunca se
+configura a mano.
 
 **Fixtures históricos:** los de `fixtures/` y `conformance/` son referencias
 musicales y estructurales, no ejemplos de completitud de procedencia; su

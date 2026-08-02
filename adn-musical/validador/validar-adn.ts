@@ -1,19 +1,59 @@
-// Validador del ADN Musical de Teclas Jade (v0.2.1-draft).
+// Validador del ADN Musical de Teclas Jade (v0.2.2-draft).
 // Compuerta B: validación estructural (ajv, JSON Schema draft 2020-12) +
-// semántica (invariantes B-1..B-7 con aritmética de fracciones exactas;
+// semántica (invariantes B-1..B-8 con aritmética de fracciones exactas;
 // prohibido el punto flotante para duraciones y posiciones).
 // El vocabulario de identificadores `basis` vive en
-// ../schema/evidence-basis.v1.json (copia ejecutable derivada del registro
-// canónico del vault). Se carga y valida ÍNTEGRO antes de validar cualquier
-// documento; ante cualquier defecto la compuerta falla cerrada con una única
-// incidencia operational_error/registro_basis y NO ejecuta ni la fase
-// estructural ni la semántica (jamás un mapa parcial).
+// ../schema/evidence-basis.v2.json (v2, con contexto instrumental
+// `instrument_kind`; copia ejecutable derivada del registro canónico del
+// vault — v1 se conserva byte-intacto como antecedente histórico, sin uso en
+// ejecución). Se carga y valida ÍNTEGRO antes de validar cualquier documento;
+// ante cualquier defecto la compuerta falla cerrada con una única incidencia
+// operational_error/registro_basis y NO ejecuta ni la fase estructural ni la
+// semántica (jamás un mapa parcial).
 // Uso: npm run validar-adn [-- archivo1.json ...]
 // Sin argumentos valida todos los .json de adn-musical/fixtures/.
 
 import Ajv2020, { type AnySchema, type ErrorObject, type ValidateFunction } from "ajv/dist/2020";
 import * as fs from "node:fs";
 import * as path from "node:path";
+import type {
+  AdnDoc,
+  EntradaBasis,
+  EtiquetaEvidencia,
+  EventoAdn,
+  InstrumentKind,
+  NotaAdn,
+  OpcionesCarga,
+  RegistroBasis,
+  ResultadoCarga,
+  WrittenPitch,
+} from "../tipos/adn-tipos";
+export type {
+  AdnDoc,
+  AlineacionTexto,
+  AlternativaGuitarra,
+  EntradaBasis,
+  EntradaEvidenciaCampo,
+  EtiquetaEvidencia,
+  EventoAdn,
+  GobernanzaAdn,
+  InstrumentKind,
+  NotaAdn,
+  OpcionesCarga,
+  PalabraAdn,
+  RangoEscrito,
+  RealizacionAdn,
+  RealizacionInstrumento,
+  RegistroBasis,
+  ResultadoCarga,
+  SeccionAdn,
+  SemanticaMusical,
+  SilabaAdn,
+  UnidadCantada,
+  VarianteAdn,
+  VozAdn,
+  WrittenPitch,
+} from "../tipos/adn-tipos";
 
 // ---------- fracciones exactas ----------
 
@@ -60,160 +100,19 @@ const OPEN_STRING_WRITTEN_MIDI: Record<number, number> = {
   6: 52, 5: 57, 4: 62, 3: 67, 2: 71, 1: 76,
 };
 
-// ---------- tipos del documento (la forma la garantiza el esquema vía ajv) ----------
+// ---------- registro de identificadores basis (mapa cerrado, v2) ----------
 
-export interface WrittenPitch {
-  step: string;
-  alter: number;
-  octave: number;
-}
+export const VERSION_ESQUEMA = "0.2.2-draft";
+export const VERSION_REGISTRO = "v2";
 
-export interface NotaAdn {
-  id: string;
-  written_pitch: WrittenPitch;
-  evidence?: string;
-}
-
-export interface EventoAdn {
-  id: string;
-  measure: number;
-  beat: string;
-  duration: string;
-  notes?: NotaAdn[];
-}
-
-export interface VozAdn {
-  id: string;
-  kind: string;
-  events: EventoAdn[];
-}
-
-export interface SeccionAdn {
-  role: string;
-  measures: number[];
-  repeats?: string;
-  gap?: string;
-}
-
-export interface AlternativaGuitarra {
-  string: number;
-  fret: number;
-  finger?: number | null;
-}
-
-export interface RealizacionAdn {
-  note_id: string;
-  string?: number;
-  fret?: number;
-  finger?: number | null;
-  hand?: string;
-  evidence?: string;
-  alternatives?: AlternativaGuitarra[];
-}
-
-export interface RealizacionInstrumento {
-  kind: string;
-  sound?: string;
-  tuning?: string;
-  capo?: number;
-  sounding_transposition_octaves?: number;
-  position?: string | null;
-  right_hand?: string | null;
-  realizations?: RealizacionAdn[];
-  profile?: string | null;
-  range_orientative?: object | null;
-  comfortable_tessitura?: object | null;
-  exercise_range?: { low: WrittenPitch; high: WrittenPitch };
-  technique?: string | null;
-  support?: object | null;
-}
-
-export interface SilabaAdn {
-  id: string;
-  text: string;
-}
-
-export interface PalabraAdn {
-  id: string;
-  text: string;
-  syllables: SilabaAdn[];
-}
-
-export interface UnidadCantada {
-  id: string;
-  syllable_ids: string[];
-  junction: string;
-  note_ids: string[];
-  melisma?: boolean;
-}
-
-export interface AlineacionTexto {
-  language: string;
-  orthographic: { text: string; words: PalabraAdn[] };
-  sung_units: UnidadCantada[];
-}
-
-export interface VarianteAdn {
-  id: string;
-  label?: string;
-  transform: Record<string, unknown>;
-}
-
-export interface EntradaEvidenciaCampo {
-  evidence: string;
-  basis: string;
-}
-
-export interface GobernanzaAdn {
-  aprobado_por_david: boolean;
-  listo_para_desarrollo: boolean;
-  validacion_profesional: string;
-  transposition_allowed: boolean;
-  unknown_notation: unknown[];
-  unsupported_features: unknown[];
-  field_evidence?: Record<string, EntradaEvidenciaCampo> | null;
-}
-
-export interface SemanticaMusical {
-  time: { signature: string; beats_per_measure: number; beat_unit: string; bpm: number; tempo_term?: string | null };
-  key?: { tonic: string; mode: string };
-  measures: number;
-  anacrusis?: object | null;
-  structure?: SeccionAdn[];
-  voices: VozAdn[];
-}
-
-export interface AdnDoc {
-  schema_version: string;
-  exercise: { id: string; title: string; source: Record<string, unknown>; evidence_default?: string };
-  musical_semantics: SemanticaMusical;
-  instrument_realization: RealizacionInstrumento;
-  text_and_vocal_alignment: AlineacionTexto | null;
-  presentation_and_rendering: {
-    type: string;
-    views: string[];
-    controls: string[];
-    bpm_initial?: number;
-    engine_suggested?: string | null;
-    hand_colors?: Record<string, string> | null;
-  };
-  variants?: VarianteAdn[];
-  evidence_governance: GobernanzaAdn;
-}
-
-// ---------- registro de identificadores basis (mapa cerrado) ----------
-
-export const VERSION_ESQUEMA = "0.2.1-draft";
-
-export const ETIQUETAS_EVIDENCIA = [
+export const ETIQUETAS_EVIDENCIA: readonly EtiquetaEvidencia[] = [
   "[verificado]",
   "[documentado]",
   "[confirmado por David]",
   "[calculado]",
   "[ilegible]",
   "[desconocido]",
-] as const;
-export type EtiquetaEvidencia = (typeof ETIQUETAS_EVIDENCIA)[number];
+];
 
 const IDS_BASIS_APROBADOS = [
   "calc.exercise.written-range.v1",
@@ -221,40 +120,13 @@ const IDS_BASIS_APROBADOS = [
   "doc.render.canto-views.v1",
   "doc.render.initial-bpm.v1",
   "doc.render.minimum-controls.v1",
+  "doc.render.piano-hand-colors.v1",
+  "doc.render.piano-views.v1",
   "doc.render.reproducible-type.v1",
   "verify.text.language.v1",
 ] as const;
 
-export interface EntradaBasis {
-  id: string;
-  evidence: EtiquetaEvidencia;
-  pointer_pattern: string;
-  meaning: string;
-}
-
-export interface RegistroBasis {
-  appliesToSchemaVersion: string;
-  entradas: readonly EntradaBasis[];
-}
-
-export type ResultadoCarga =
-  | { ok: true; registro: RegistroBasis }
-  | { ok: false; detalle: string };
-
-// Inyección controlada EXCLUSIVAMENTE para pruebas. Conducta determinista:
-// - si `contenido !== undefined` (comparación estricta, no truthiness) se usa
-//   ese texto y NO se toca el disco;
-// - si no, se lee `ruta` si fue provista; si no, la ruta predeterminada,
-//   resuelta respecto de ESTE módulo (nunca respecto del cwd).
-// Prohibido para las pruebas: renombrar, borrar, sobrescribir o sustituir el
-// registro real del repositorio.
-export interface OpcionesCarga {
-  ruta?: string;
-  contenido?: string;
-  exigirOrdenAlfabetico?: boolean;
-}
-
-const RUTA_REGISTRO = path.join(__dirname, "..", "schema", "evidence-basis.v1.json");
+const RUTA_REGISTRO = path.join(__dirname, "..", "schema", "evidence-basis.v2.json");
 const METADATOS_REGISTRO = [
   "registry",
   "version",
@@ -262,10 +134,13 @@ const METADATOS_REGISTRO = [
   "canonical_source",
   "pointer_pattern_syntax",
   "entry_order",
+  "instrument_kind_semantics",
 ] as const;
 // En orden alfabético, para comparar contra Object.keys(entrada).sort().
-const CAMPOS_ENTRADA = ["evidence", "id", "meaning", "pointer_pattern"] as const;
+const CAMPOS_ENTRADA = ["evidence", "id", "instrument_kind", "meaning", "pointer_pattern"] as const;
 const RE_SEGMENTO_PATRON = /^[A-Za-z0-9_.-]+$/;
+
+const KINDS_INSTRUMENTO = ["none", "voice", "guitar", "piano"] as const;
 
 function esObjetoPlano(x: unknown): x is Record<string, unknown> {
   return typeof x === "object" && x !== null && !Array.isArray(x);
@@ -273,6 +148,10 @@ function esObjetoPlano(x: unknown): x is Record<string, unknown> {
 
 function esEtiqueta(x: unknown): x is EtiquetaEvidencia {
   return typeof x === "string" && (ETIQUETAS_EVIDENCIA as readonly string[]).includes(x);
+}
+
+function esInstrumentKind(x: unknown): x is InstrumentKind {
+  return x === null || (typeof x === "string" && (KINDS_INSTRUMENTO as readonly string[]).includes(x));
 }
 
 // Gramática aprobada de los patrones del registro: ("/" token)+ con
@@ -283,6 +162,11 @@ function patronValido(p: string): boolean {
   return p.slice(1).split("/").every((t) => t === "*" || RE_SEGMENTO_PATRON.test(t));
 }
 
+// Inyección controlada EXCLUSIVAMENTE para pruebas (ver OpcionesCarga en
+// ../tipos/adn-tipos). Conducta determinista: `contenido !== undefined` usa
+// ese texto sin tocar el disco; si no, `ruta`; si no, la ruta predeterminada
+// resuelta respecto de ESTE módulo (nunca respecto del cwd). Prohibido para
+// las pruebas: renombrar, borrar, sobrescribir o sustituir el registro real.
 export function cargarRegistroBasis(op?: OpcionesCarga): ResultadoCarga {
   const falla = (detalle: string): ResultadoCarga => ({ ok: false, detalle });
   let texto: string;
@@ -309,8 +193,11 @@ export function cargarRegistroBasis(op?: OpcionesCarga): ResultadoCarga {
       return falla(`metadato ausente o no textual: ${clave}`);
     }
   }
-  if (crudo.registry !== "evidence-basis" || crudo.version !== "v1") {
-    return falla(`registro no reconocido: registry=${JSON.stringify(crudo.registry)}, version=${JSON.stringify(crudo.version)}`);
+  if (crudo.registry !== "evidence-basis") {
+    return falla(`registro no reconocido: registry=${JSON.stringify(crudo.registry)}`);
+  }
+  if (crudo.version !== VERSION_REGISTRO) {
+    return falla(`versión de registro incompatible: ${JSON.stringify(crudo.version)} (se exige ${JSON.stringify(VERSION_REGISTRO)})`);
   }
   const aplica = crudo.applies_to_schema_version;
   if (aplica !== VERSION_ESQUEMA) {
@@ -331,11 +218,14 @@ export function cargarRegistroBasis(op?: OpcionesCarga): ResultadoCarga {
     const meaning = e.meaning;
     if (typeof meaning !== "string" || meaning === "") return falla(`entrada ${i}: meaning vacío o no textual`);
     if (!esEtiqueta(e.evidence)) return falla(`entrada ${i}: etiqueta no permitida ${JSON.stringify(e.evidence)}`);
+    if (!esInstrumentKind(e.instrument_kind)) {
+      return falla(`entrada ${i}: instrument_kind no permitido ${JSON.stringify(e.instrument_kind)}`);
+    }
     const patron = e.pointer_pattern;
     if (typeof patron !== "string" || !patronValido(patron)) {
       return falla(`entrada ${i}: patrón inválido ${JSON.stringify(patron)}`);
     }
-    entradas.push({ id, evidence: e.evidence, pointer_pattern: patron, meaning });
+    entradas.push({ id, evidence: e.evidence, instrument_kind: e.instrument_kind, pointer_pattern: patron, meaning });
   }
   const vistos = new Set<string>();
   for (const en of entradas) {
@@ -602,15 +492,26 @@ export function validarSemantica(adn: AdnDoc, registro: RegistroBasis): string[]
       }
     }
   }
-  // (e) rango vocal (sin cambios)
-  if (real.kind === "voice" && real.exercise_range) {
+  // B-8: exercise_range (voz y piano) es un cálculo automático — toda nota
+  // dentro del rango y AMBAS cotas alcanzadas por alguna nota
+  if ((real.kind === "voice" || real.kind === "piano") && real.exercise_range) {
     const lo = midiOf(real.exercise_range.low);
     const hi = midiOf(real.exercise_range.high);
+    let hayLo = false;
+    let hayHi = false;
     for (const [id, n] of notasPorId) {
       const v = midiOf(n.written_pitch);
       if (v < lo || v > hi) {
-        errores.push(`voz: nota ${id} (MIDI ${v}) fuera de exercise_range [${lo}, ${hi}]`);
+        errores.push(`/instrument_realization/exercise_range: nota ${id} (MIDI ${v}) fuera de [${lo}, ${hi}]`);
       }
+      if (v === lo) hayLo = true;
+      if (v === hi) hayHi = true;
+    }
+    if (notasPorId.size > 0 && !hayLo) {
+      errores.push(`/instrument_realization/exercise_range/low: cota no alcanzada por ninguna nota (MIDI ${lo})`);
+    }
+    if (notasPorId.size > 0 && !hayHi) {
+      errores.push(`/instrument_realization/exercise_range/high: cota no alcanzada por ninguna nota (MIDI ${hi})`);
     }
   }
 
@@ -732,6 +633,10 @@ export function validarSemantica(adn: AdnDoc, registro: RegistroBasis): string[]
       if (!reg) {
         // El enum del esquema lo impide; defensa explícita ante desincronía.
         errores.push(`${ruta}: basis no registrado ${entrada.basis}`);
+        continue;
+      }
+      if (reg.instrument_kind !== null && reg.instrument_kind !== real.kind) {
+        errores.push(`${ruta}: el basis ${reg.id} es de contexto instrumental "${reg.instrument_kind}" y la realización del documento es "${real.kind}"`);
         continue;
       }
       if (entrada.evidence !== reg.evidence) {

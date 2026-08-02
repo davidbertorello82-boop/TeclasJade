@@ -1,5 +1,5 @@
 {
-  "schema_version": "0.2.1-draft",
+  "schema_version": "0.2.2-draft",
   "exercise": {
     "id": "conformance-piano",
     "title": "Fixture de conformidad: realizacion de piano",

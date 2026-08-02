@@ -2,12 +2,12 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "adn-musical.schema.json",
   "title": "ADN Musical de Teclas Jade",
-  "description": "Esquema v0.2.1-draft. Valida la instancia JSON de un ejercicio en las cinco capas de la Arquitectura del Compilador de ADN Musical v0.2. El Piloto 1 canónico del vault es fixture de conformidad obligatorio de este esquema. El vocabulario de identificadores basis vive en evidence-basis.v1.json (copia ejecutable derivada del registro canónico del vault).",
+  "description": "Esquema v0.2.2-draft. Valida la instancia JSON de un ejercicio en las cinco capas de la Arquitectura del Compilador de ADN Musical v0.2. El Piloto 1 canónico del vault es fixture de conformidad obligatorio de este esquema. El vocabulario de identificadores basis vive en evidence-basis.v2.json (v2, con contexto instrumental; copia ejecutable derivada del registro canónico del vault — v1 se conserva como antecedente).",
   "type": "object",
   "required": ["schema_version", "exercise", "musical_semantics", "instrument_realization", "text_and_vocal_alignment", "presentation_and_rendering", "evidence_governance"],
   "additionalProperties": false,
   "properties": {
-    "schema_version": { "const": "0.2.1-draft" },
+    "schema_version": { "const": "0.2.2-draft" },
     "exercise": {
       "type": "object",
       "required": ["id", "title", "source"],
@@ -156,6 +156,8 @@
         "doc.render.canto-views.v1",
         "doc.render.initial-bpm.v1",
         "doc.render.minimum-controls.v1",
+        "doc.render.piano-hand-colors.v1",
+        "doc.render.piano-views.v1",
         "doc.render.reproducible-type.v1",
         "verify.text.language.v1"
       ]
@@ -292,6 +294,15 @@
       "additionalProperties": false,
       "properties": {
         "kind": { "const": "piano" },
+        "exercise_range": {
+          "type": "object",
+          "required": ["low", "high"],
+          "additionalProperties": false,
+          "properties": {
+            "low": { "$ref": "#/$defs/writtenPitch" },
+            "high": { "$ref": "#/$defs/writtenPitch" }
+          }
+        },
         "realizations": {
           "type": "array",
           "minItems": 1,
