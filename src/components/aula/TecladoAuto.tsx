@@ -1,39 +1,48 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import type { Mano, NotaEvento } from "@/lib/aulas/tipos";
 
-// Teclado virtual de DOS octavas que se toca solo (doc 10, seccion 8).
-// Reproduce la secuencia del ejercicio al BPM elegido, pinta cada tecla en el
-// momento en que suena y muestra el numero de dedo (M.D./M.I.) encima.
-// CERO deteccion de lo que el alumno toca: solo demuestra.
+// Teclado virtual que se toca solo (doc 10, secciones 8 y 10).
+// Reproduce la secuencia del ejercicio al BPM elegido, pinta cada tecla con el
+// color canonico de su mano mientras suena SU DURACION REAL, y muestra el
+// numero de dedo (M.D./M.I.) encima. Rango dinamico: octavas completas Do-Si
+// con minimo pedagogico de dos (fallback C3-B4 para ejercicios sin ADN).
+// CERO deteccion de lo que el alumno toca: solo demuestra (regla de solo
+// demostracion, doc 10 seccion 8 / decision canonica 20).
 
-// Rango C3 (48) a B4 (71). Blancas de las dos octavas:
-const BLANCAS = [48, 50, 52, 53, 55, 57, 59, 60, 62, 64, 65, 67, 69, 71];
-// Negras, con el indice de la tecla blanca a cuya derecha se apoyan:
-const NEGRAS: { midi: number; despuesDe: number }[] = [
-  { midi: 49, despuesDe: 0 }, // Do#3
-  { midi: 51, despuesDe: 1 }, // Re#3
-  { midi: 54, despuesDe: 3 }, // Fa#3
-  { midi: 56, despuesDe: 4 }, // Sol#3
-  { midi: 58, despuesDe: 5 }, // La#3
-  { midi: 61, despuesDe: 7 }, // Do#4
-  { midi: 63, despuesDe: 8 }, // Re#4
-  { midi: 66, despuesDe: 10 }, // Fa#4
-  { midi: 68, despuesDe: 11 }, // Sol#4
-  { midi: 70, despuesDe: 12 }, // La#4
-];
+// Paleta canonica GLOBAL de colores de mano (decision 5 del Compilador +
+// ADN-DOC-P2): derecha = naranja, izquierda = azul. Indexada por las PALABRAS
+// que declara el ADN (hand_colors); los ejercicios sin ADN usan las mismas
+// palabras por defecto. Contraste AA con texto blanco #faf8f3:
+// #C2410C ~ 5.2:1 · #1D4ED8 ~ 6.7:1.
+const PALETA_MANO: Record<string, string> = {
+  naranja: "#C2410C",
+  azul: "#1D4ED8",
+};
+const COLORES_DEFAULT = { derecha: "naranja", izquierda: "azul" };
+// Fallback exacto del teclado fijo historico (C3-B4) para los ejercicios que
+// todavia no estan gobernados por ADN. No migrarlos es deliberado.
+const RANGO_FALLBACK = { minMidi: 48, maxMidi: 71 };
+const PC_BLANCAS = new Set([0, 2, 4, 5, 7, 9, 11]);
+const NOMBRES = ["Do", "Do#", "Re", "Re#", "Mi", "Fa", "Fa#", "Sol", "Sol#", "La", "La#", "Si"];
 
-const ANCHO_BLANCA = 100 / BLANCAS.length; // % del ancho total
-const ANCHO_NEGRA = ANCHO_BLANCA * 0.62;
+function midiAFrecuencia(midi: number): number {
+  return 440 * Math.pow(2, (midi - 69) / 12);
+}
+
+function nombreNota(midi: number): string {
+  return `${NOMBRES[midi % 12]}${Math.floor(midi / 12) - 1}`;
+}
 
 interface TeclaActiva {
   mano: Mano;
   dedo: number;
 }
 
-function midiAFrecuencia(midi: number): number {
-  return 440 * Math.pow(2, (midi - 69) / 12);
+interface FuenteActiva {
+  osc: OscillatorNode;
+  gain: GainNode;
 }
 
 function firmaActivas(activas: Record<number, TeclaActiva>): string {
@@ -46,26 +55,59 @@ function firmaActivas(activas: Record<number, TeclaActiva>): string {
 export function TecladoAuto({
   secuencia,
   bpmSugerido,
+  rangoTeclado,
+  coloresMano,
 }: {
   secuencia: NotaEvento[];
   bpmSugerido: number;
+  rangoTeclado?: { minMidi: number; maxMidi: number };
+  coloresMano?: { derecha: string; izquierda: string };
 }) {
   const [bpm, setBpm] = useState(bpmSugerido);
   const [reproduciendo, setReproduciendo] = useState(false);
   const [bucle, setBucle] = useState(false);
   const [activas, setActivas] = useState<Record<number, TeclaActiva>>({});
 
+  const rango = rangoTeclado ?? RANGO_FALLBACK;
+  const palabras = coloresMano ?? COLORES_DEFAULT;
+  const colorMD = PALETA_MANO[palabras.derecha] ?? PALETA_MANO.naranja;
+  const colorMI = PALETA_MANO[palabras.izquierda] ?? PALETA_MANO.azul;
+
+  // Geometria del teclado generada desde el rango (blancas + negras con el
+  // indice de la blanca a cuya derecha se apoyan).
+  const { blancas, negras } = useMemo(() => {
+    const b: number[] = [];
+    const n: { midi: number; despuesDe: number }[] = [];
+    for (let m = rango.minMidi; m <= rango.maxMidi; m++) {
+      if (PC_BLANCAS.has(m % 12)) b.push(m);
+      else n.push({ midi: m, despuesDe: b.length - 1 });
+    }
+    return { blancas: b, negras: n };
+  }, [rango.minMidi, rango.maxMidi]);
+
+  const octavas = Math.round((rango.maxMidi - rango.minMidi + 1) / 12);
+  const anchoBlanca = 100 / blancas.length;
+  const anchoNegra = anchoBlanca * 0.62;
+  const tecladoAncho = octavas > 2; // ancho natural + desplazamiento horizontal
+
   const beatRef = useRef(0);
   const ultimoTsRef = useRef<number | null>(null);
   const rafRef = useRef<number | null>(null);
   const disparadasRef = useRef<Set<number>>(new Set());
   const audioRef = useRef<AudioContext | null>(null);
+  const fuentesRef = useRef<Set<FuenteActiva>>(new Set());
   const firmaRef = useRef("");
 
+  // Copias en ref para que el motor lea el valor vigente sin recrear el loop
+  // (actualizadas en efectos: jamás durante el render).
   const bpmRef = useRef(bpm);
-  bpmRef.current = bpm;
+  useEffect(() => {
+    bpmRef.current = bpm;
+  }, [bpm]);
   const bucleRef = useRef(bucle);
-  bucleRef.current = bucle;
+  useEffect(() => {
+    bucleRef.current = bucle;
+  }, [bucle]);
 
   const totalBeats = useMemo(
     () =>
@@ -76,31 +118,42 @@ export function TecladoAuto({
     [secuencia],
   );
 
-  const tocarNota = useCallback((midi: number) => {
-    const ac = audioRef.current;
-    if (!ac) return;
-    const osc = ac.createOscillator();
-    const g = ac.createGain();
-    osc.type = "triangle";
-    osc.frequency.value = midiAFrecuencia(midi);
-    const t = ac.currentTime;
-    // Envolvente corta tipo pulsacion de piano (tono sintetizado placeholder).
-    g.gain.setValueAtTime(0.0001, t);
-    g.gain.exponentialRampToValueAtTime(0.22, t + 0.01);
-    g.gain.exponentialRampToValueAtTime(0.0001, t + 0.6);
-    osc.connect(g);
-    g.connect(ac.destination);
-    osc.start(t);
-    osc.stop(t + 0.65);
-  }, []);
+  // Motor de reproduccion: corre SOLO mientras reproduciendo === true. El loop
+  // vive dentro del efecto (sin autorreferencia de useCallback) y se limpia al
+  // pausar, al terminar o al desmontar.
+  useEffect(() => {
+    if (!reproduciendo) return;
 
-  const detenerRaf = useCallback(() => {
-    if (rafRef.current !== null) cancelAnimationFrame(rafRef.current);
-    rafRef.current = null;
-  }, []);
+    // Dispara una nota con su DURACION REAL: duracionBeat x 60 / BPM vigente.
+    // La envolvente queda atada a esa duracion (la redonda a 60 BPM suena 4 s).
+    // Tono sintetizado triangular: PLACEHOLDER explicito (motor de audio real:
+    // lote futuro; alerta canonica del Roadmap sigue abierta).
+    const tocarNota = (midi: number, duracionSeg: number) => {
+      const ac = audioRef.current;
+      if (!ac) return;
+      const osc = ac.createOscillator();
+      const g = ac.createGain();
+      osc.type = "triangle";
+      osc.frequency.value = midiAFrecuencia(midi);
+      const t = ac.currentTime;
+      const fin = t + Math.max(duracionSeg, 0.08);
+      g.gain.setValueAtTime(0.0001, t);
+      g.gain.exponentialRampToValueAtTime(0.22, t + 0.01);
+      g.gain.setValueAtTime(0.22, Math.max(fin - 0.12, t + 0.011));
+      g.gain.exponentialRampToValueAtTime(0.0001, fin);
+      osc.connect(g);
+      g.connect(ac.destination);
+      const fuente: FuenteActiva = { osc, gain: g };
+      fuentesRef.current.add(fuente);
+      osc.onended = () => {
+        fuentesRef.current.delete(fuente);
+        g.disconnect();
+      };
+      osc.start(t);
+      osc.stop(fin + 0.02);
+    };
 
-  const frame = useCallback(
-    (ts: number) => {
+    const paso = (ts: number) => {
       if (ultimoTsRef.current === null) ultimoTsRef.current = ts;
       const dt = (ts - ultimoTsRef.current) / 1000;
       ultimoTsRef.current = ts;
@@ -109,15 +162,13 @@ export function TecladoAuto({
       beatRef.current += dt / segsPorBeat;
       const beat = beatRef.current;
 
-      // Disparar el audio de cada nota cuando el cabezal cruza su inicio.
       secuencia.forEach((n, i) => {
         if (!disparadasRef.current.has(i) && n.inicioBeat <= beat) {
           disparadasRef.current.add(i);
-          tocarNota(n.pitchMidi);
+          tocarNota(n.pitchMidi, (n.duracionBeat * 60) / bpmRef.current);
         }
       });
 
-      // Teclas que estan sonando ahora (para pintarlas).
       const act: Record<number, TeclaActiva> = {};
       for (const n of secuencia) {
         if (beat >= n.inicioBeat && beat < n.inicioBeat + n.duracionBeat) {
@@ -135,7 +186,6 @@ export function TecladoAuto({
           beatRef.current = 0;
           disparadasRef.current = new Set();
         } else {
-          detenerRaf();
           beatRef.current = totalBeats;
           firmaRef.current = "";
           setActivas({});
@@ -143,12 +193,17 @@ export function TecladoAuto({
           return;
         }
       }
-      rafRef.current = requestAnimationFrame(frame);
-    },
-    [secuencia, totalBeats, tocarNota, detenerRaf],
-  );
+      rafRef.current = requestAnimationFrame(paso);
+    };
 
-  const reproducir = useCallback(async () => {
+    rafRef.current = requestAnimationFrame(paso);
+    return () => {
+      if (rafRef.current !== null) cancelAnimationFrame(rafRef.current);
+      rafRef.current = null;
+    };
+  }, [reproduciendo, secuencia, totalBeats]);
+
+  async function reproducir() {
     if (!audioRef.current) {
       const Ctor =
         window.AudioContext ||
@@ -156,99 +211,152 @@ export function TecladoAuto({
           .webkitAudioContext;
       audioRef.current = new Ctor();
     }
-    // Clave: esperar a que el contexto este realmente "running" ANTES de
-    // arrancar el loop. resume() se dispara dentro del gesto de Play (no viola
-    // la politica de autoplay), pero es asincrono: si no lo esperamos, la
-    // primera nota se agenda con el contexto todavia suspendido y no suena
-    // ("primer Play mudo"). El resto de las teclas se pintan igual porque eso
-    // es visual y no depende del audio.
+    // resume() dentro del gesto de Play (no viola autoplay) y esperado ANTES
+    // de arrancar, para que la primera nota no caiga con el contexto suspendido.
     if (audioRef.current.state !== "running") {
       await audioRef.current.resume();
     }
-
-    // Si estaba al final, arranca de cero.
     if (beatRef.current >= totalBeats) {
       beatRef.current = 0;
       disparadasRef.current = new Set();
     }
     ultimoTsRef.current = null;
     setReproduciendo(true);
-    rafRef.current = requestAnimationFrame(frame);
-  }, [frame, totalBeats]);
+  }
 
-  const pausar = useCallback(() => {
-    detenerRaf();
+  // Pausa = detener exactamente donde esta Y en silencio: suspende el
+  // AudioContext (congela todas las fuentes activas, sin notas fantasma);
+  // Play las reanuda donde quedaron.
+  function pausar() {
     setReproduciendo(false);
-  }, [detenerRaf]);
+    void audioRef.current?.suspend();
+  }
 
-  const reiniciar = useCallback(() => {
+  function detenerFuentes() {
+    const ac = audioRef.current;
+    if (!ac) return;
+    for (const f of fuentesRef.current) {
+      try {
+        f.osc.stop(ac.currentTime);
+      } catch {
+        /* la fuente ya habia finalizado */
+      }
+      f.gain.disconnect();
+    }
+    fuentesRef.current.clear();
+  }
+
+  function reiniciar() {
+    detenerFuentes();
     beatRef.current = 0;
     disparadasRef.current = new Set();
     ultimoTsRef.current = null;
     firmaRef.current = "";
     setActivas({});
+  }
+
+  // Limpieza al desmontar: detener TODAS las fuentes activas y cerrar el
+  // contexto (solo refs: sin dependencias).
+  useEffect(() => {
+    const fuentes = fuentesRef.current;
+    return () => {
+      const ac = audioRef.current;
+      if (!ac) return;
+      for (const f of fuentes) {
+        try {
+          f.osc.stop();
+        } catch {
+          /* la fuente ya habia finalizado */
+        }
+      }
+      fuentes.clear();
+      void ac.close();
+    };
   }, []);
 
-  // Limpieza al desmontar: nada de audio ni animaciones colgadas.
-  useEffect(() => {
-    return () => {
-      detenerRaf();
-      void audioRef.current?.close();
-    };
-  }, [detenerRaf]);
+  const etiquetaRango = `${nombreNota(rango.minMidi)} a ${nombreNota(rango.maxMidi)}`;
 
-  const indiceBlancaDe = (midi: number) => BLANCAS.indexOf(midi);
-
-  return (
-    <div className="w-full">
-      {/* Teclado */}
-      <div
-        className="relative mx-auto w-full select-none"
-        style={{ height: "170px", maxWidth: "640px" }}
-        role="img"
-        aria-label="Teclado virtual de dos octavas que demuestra el ejercicio"
-      >
-        {/* Teclas blancas */}
-        <div className="absolute inset-0 flex">
-          {BLANCAS.map((midi) => {
-            const activa = activas[midi];
-            return (
-              <div
-                key={midi}
-                className="relative flex-1 rounded-b-md border border-tierra/40 transition-colors"
-                style={{
-                  background: activa ? "var(--color-jade)" : "#faf8f3",
-                }}
-              >
-                {activa && <EtiquetaDedo mano={activa.mano} dedo={activa.dedo} />}
-              </div>
-            );
-          })}
-        </div>
-
-        {/* Teclas negras */}
-        {NEGRAS.map(({ midi, despuesDe }) => {
+  const teclado = (
+    <div
+      className="relative select-none"
+      style={
+        tecladoAncho
+          ? { height: "170px", width: `${blancas.length * 44}px`, minWidth: "100%" }
+          : { height: "170px", width: "100%", maxWidth: "640px" }
+      }
+      role="img"
+      aria-label={`Teclado virtual de ${octavas} octavas (${etiquetaRango}) que demuestra el ejercicio`}
+    >
+      {/* Teclas blancas */}
+      <div className="absolute inset-0 flex">
+        {blancas.map((midi) => {
           const activa = activas[midi];
-          const left = (despuesDe + 1) * ANCHO_BLANCA - ANCHO_NEGRA / 2;
+          const color = activa ? (activa.mano === "MD" ? colorMD : colorMI) : "#faf8f3";
           return (
             <div
               key={midi}
-              className="absolute top-0 rounded-b-md transition-colors"
-              style={{
-                left: `${left}%`,
-                width: `${ANCHO_NEGRA}%`,
-                height: "62%",
-                zIndex: 10,
-                background: activa ? "var(--color-jade-claro)" : "#241f1a",
-              }}
+              className="relative flex-1 rounded-b-md border border-tierra/40 transition-colors"
+              style={{ background: color }}
             >
               {activa && (
-                <EtiquetaDedo mano={activa.mano} dedo={activa.dedo} sobreNegra />
+                <EtiquetaDedo
+                  mano={activa.mano}
+                  dedo={activa.dedo}
+                  colorMano={activa.mano === "MD" ? colorMD : colorMI}
+                />
               )}
             </div>
           );
         })}
       </div>
+
+      {/* Teclas negras */}
+      {negras.map(({ midi, despuesDe }) => {
+        const activa = activas[midi];
+        const left = (despuesDe + 1) * anchoBlanca - anchoNegra / 2;
+        const color = activa ? (activa.mano === "MD" ? colorMD : colorMI) : "#241f1a";
+        return (
+          <div
+            key={midi}
+            className="absolute top-0 rounded-b-md transition-colors"
+            style={{
+              left: `${left}%`,
+              width: `${anchoNegra}%`,
+              height: "62%",
+              zIndex: 10,
+              background: color,
+            }}
+          >
+            {activa && (
+              <EtiquetaDedo
+                mano={activa.mano}
+                dedo={activa.dedo}
+                colorMano={activa.mano === "MD" ? colorMD : colorMI}
+                sobreNegra
+              />
+            )}
+          </div>
+        );
+      })}
+    </div>
+  );
+
+  return (
+    <div className="w-full">
+      {tecladoAncho ? (
+        <div className="w-full overflow-x-auto pb-2">{teclado}</div>
+      ) : (
+        <div className="mx-auto w-full" style={{ maxWidth: "640px" }}>
+          {teclado}
+        </div>
+      )}
+
+      {tecladoAncho && (
+        <p className="mt-2 font-sans text-xs text-[#f3ecdf]/60 sm:hidden">
+          📱 Girá el teléfono para ver el teclado completo, o deslizalo hacia
+          los costados.
+        </p>
+      )}
 
       {/* Controles del reproductor (doc 10, seccion 8) */}
       <div className="mt-5 flex flex-wrap items-center gap-4 font-sans">
@@ -308,15 +416,17 @@ export function TecladoAuto({
 function EtiquetaDedo({
   mano,
   dedo,
+  colorMano,
   sobreNegra = false,
 }: {
   mano: Mano;
   dedo: number;
+  colorMano: string;
   sobreNegra?: boolean;
 }) {
-  // Pastilla siempre legible (fondo crema, texto oscuro), bordeada por color
-  // de mano: M.D. jade, M.I. tierra. En negras se ubica un poco mas arriba.
-  const colorMano = mano === "MD" ? "var(--color-jade)" : "var(--color-tierra)";
+  // Pastilla siempre legible (fondo crema, texto oscuro, ~15:1), bordeada por
+  // el color canonico de la mano; la sigla M.D./M.I. va en blanco sobre el
+  // color de mano (AA).
   return (
     <div
       className="absolute left-1/2 -translate-x-1/2 flex flex-col items-center gap-0.5"

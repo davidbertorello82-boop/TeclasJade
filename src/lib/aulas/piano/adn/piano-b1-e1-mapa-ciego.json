@@ -1,0 +1,230 @@
+{
+  "schema_version": "0.2.2-draft",
+  "exercise": {
+    "id": "piano-b1-e1-mapa-ciego",
+    "title": "Mapa Ciego del Teclado",
+    "evidence_default": "[confirmado por David]",
+    "source": {
+      "kind": "original",
+      "author": "David Bertorello",
+      "octave_convention": "cientifica"
+    }
+  },
+  "musical_semantics": {
+    "key": {
+      "tonic": "C",
+      "mode": "major"
+    },
+    "time": {
+      "signature": "4/4",
+      "beats_per_measure": 4,
+      "beat_unit": "1/4",
+      "bpm": 60
+    },
+    "measures": 2,
+    "voices": [
+      {
+        "id": "v1",
+        "kind": "melodic",
+        "events": [
+          {
+            "id": "e01",
+            "measure": 1,
+            "beat": "1/1",
+            "duration": "1/4",
+            "notes": [
+              {
+                "id": "n01",
+                "written_pitch": {
+                  "step": "C",
+                  "octave": 4,
+                  "alter": 0
+                }
+              }
+            ]
+          },
+          {
+            "id": "e02",
+            "measure": 1,
+            "beat": "2/1",
+            "duration": "1/4",
+            "notes": [
+              {
+                "id": "n02",
+                "written_pitch": {
+                  "step": "D",
+                  "octave": 4,
+                  "alter": 0
+                }
+              }
+            ]
+          },
+          {
+            "id": "e03",
+            "measure": 1,
+            "beat": "3/1",
+            "duration": "1/4",
+            "notes": [
+              {
+                "id": "n03",
+                "written_pitch": {
+                  "step": "E",
+                  "octave": 4,
+                  "alter": 0
+                }
+              }
+            ]
+          },
+          {
+            "id": "e04",
+            "measure": 1,
+            "beat": "4/1",
+            "duration": "1/4",
+            "notes": [
+              {
+                "id": "n04",
+                "written_pitch": {
+                  "step": "F",
+                  "octave": 4,
+                  "alter": 0
+                }
+              }
+            ]
+          },
+          {
+            "id": "e05",
+            "measure": 2,
+            "beat": "1/1",
+            "duration": "1/1",
+            "notes": [
+              {
+                "id": "n05",
+                "written_pitch": {
+                  "step": "G",
+                  "octave": 4,
+                  "alter": 0
+                }
+              }
+            ]
+          }
+        ]
+      }
+    ]
+  },
+  "text_and_vocal_alignment": null,
+  "instrument_realization": {
+    "kind": "piano",
+    "exercise_range": {
+      "low": {
+        "step": "C",
+        "octave": 4,
+        "alter": 0
+      },
+      "high": {
+        "step": "G",
+        "octave": 4,
+        "alter": 0
+      }
+    },
+    "realizations": [
+      {
+        "note_id": "n01",
+        "hand": "right",
+        "finger": 1
+      },
+      {
+        "note_id": "n02",
+        "hand": "right",
+        "finger": 2
+      },
+      {
+        "note_id": "n03",
+        "hand": "right",
+        "finger": 3
+      },
+      {
+        "note_id": "n04",
+        "hand": "right",
+        "finger": 4
+      },
+      {
+        "note_id": "n05",
+        "hand": "right",
+        "finger": 5
+      }
+    ]
+  },
+  "presentation_and_rendering": {
+    "type": "reproducible",
+    "views": [
+      "staff_treble",
+      "keyboard"
+    ],
+    "controls": [
+      "play",
+      "pause",
+      "restart",
+      "bpm_slider",
+      "loop"
+    ],
+    "bpm_initial": 60,
+    "hand_colors": {
+      "right": "naranja",
+      "left": "azul"
+    }
+  },
+  "evidence_governance": {
+    "aprobado_por_david": true,
+    "listo_para_desarrollo": true,
+    "validacion_profesional": "pendiente",
+    "transposition_allowed": false,
+    "unknown_notation": [],
+    "unsupported_features": [],
+    "field_evidence": {
+      "/musical_semantics/voices/0/events/0/beat": {
+        "evidence": "[calculado]",
+        "basis": "calc.timeline.measure-beat.v1"
+      },
+      "/musical_semantics/voices/0/events/1/beat": {
+        "evidence": "[calculado]",
+        "basis": "calc.timeline.measure-beat.v1"
+      },
+      "/musical_semantics/voices/0/events/2/beat": {
+        "evidence": "[calculado]",
+        "basis": "calc.timeline.measure-beat.v1"
+      },
+      "/musical_semantics/voices/0/events/3/beat": {
+        "evidence": "[calculado]",
+        "basis": "calc.timeline.measure-beat.v1"
+      },
+      "/musical_semantics/voices/0/events/4/beat": {
+        "evidence": "[calculado]",
+        "basis": "calc.timeline.measure-beat.v1"
+      },
+      "/instrument_realization/exercise_range": {
+        "evidence": "[calculado]",
+        "basis": "calc.exercise.written-range.v1"
+      },
+      "/presentation_and_rendering/type": {
+        "evidence": "[documentado]",
+        "basis": "doc.render.reproducible-type.v1"
+      },
+      "/presentation_and_rendering/views": {
+        "evidence": "[documentado]",
+        "basis": "doc.render.piano-views.v1"
+      },
+      "/presentation_and_rendering/hand_colors": {
+        "evidence": "[documentado]",
+        "basis": "doc.render.piano-hand-colors.v1"
+      },
+      "/presentation_and_rendering/controls": {
+        "evidence": "[documentado]",
+        "basis": "doc.render.minimum-controls.v1"
+      },
+      "/presentation_and_rendering/bpm_initial": {
+        "evidence": "[documentado]",
+        "basis": "doc.render.initial-bpm.v1"
+      }
+    }
+  }
+}

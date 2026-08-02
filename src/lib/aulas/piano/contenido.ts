@@ -11,7 +11,10 @@
 // (C4 = 60) es la frontera: octava grave = mano izquierda, aguda = derecha.
 
 import type { Aula, NotaEvento } from "../tipos";
+import type { AdnDoc } from "../../../../adn-musical/tipos/adn-tipos";
 import { expandirEspejo } from "../digitacionEspejo";
+import { adaptarAdnPiano } from "../../adn/adaptarAdnPiano";
+import adnMapaCiego from "./adn/piano-b1-e1-mapa-ciego.json";
 
 // --- Notas MIDI usadas (C4 = 60 = Do central) ---
 const C3 = 48, E3 = 52, F3 = 53, G3 = 55, A3 = 57, B3 = 59;
@@ -20,16 +23,11 @@ const C4 = 60, D4 = 62, E4 = 64, F4 = 65, G4 = 67;
 const Fs3 = 54, Gs3 = 56, As3 = 58; // grupo grave de 3 negras: Fa#-Sol#-La#
 const Cs4 = 61, Ds4 = 63, Fs4 = 66, Gs4 = 68, As4 = 70; // negras agudas
 
-// Ejercicio 1 — Mapa Ciego del Teclado.
-// Demostracion: posicion de 5 dedos de la mano derecha anclada en el Do
-// central, para fijar donde esta el Do.
-const SEC_MAPA_CIEGO: NotaEvento[] = [
-  { pitchMidi: C4, mano: "MD", dedo: 1, inicioBeat: 0, duracionBeat: 1 },
-  { pitchMidi: D4, mano: "MD", dedo: 2, inicioBeat: 1, duracionBeat: 1 },
-  { pitchMidi: E4, mano: "MD", dedo: 3, inicioBeat: 2, duracionBeat: 1 },
-  { pitchMidi: F4, mano: "MD", dedo: 4, inicioBeat: 3, duracionBeat: 1 },
-  { pitchMidi: G4, mano: "MD", dedo: 5, inicioBeat: 4, duracionBeat: 2 },
-];
+// Ejercicio 1 — Mapa Ciego del Teclado: gobernado por su ADN canonico
+// (Circuito de Demostracion ADN). La secuencia ya no se escribe a mano: sale
+// del ADN embarcado (copia byte-identica del vault, verificada por la
+// compuerta de prebuild) via el adaptador puro.
+const DEMO_MAPA_CIEGO = adaptarAdnPiano(adnMapaCiego as unknown as AdnDoc);
 
 // Ejercicio 3 — El Espejo de Agua (movimiento contrario). Ejercicio "espejo":
 // se carga SOLO la digitacion de la mano derecha; la izquierda la deriva la
@@ -107,8 +105,11 @@ export const AULA_PIANO: Aula = {
             "Sentate con la espalda recta y los ojos cerrados. Deslizá la mano por el teclado sin presionar, sintiendo los grupos de teclas negras. Ubicá el Do como la tecla blanca inmediata a la izquierda de un grupo de 2 negras.",
           autoevaluacion:
             "Tocá a ciegas la nota que creés que es Do; después abrí los ojos y verificá la posición del dedo.",
-          bpmSugerido: 60,
-          secuencia: SEC_MAPA_CIEGO,
+          bpmSugerido: DEMO_MAPA_CIEGO.bpmSugerido,
+          secuencia: DEMO_MAPA_CIEGO.secuencia,
+          rangoTeclado: DEMO_MAPA_CIEGO.rangoTeclado,
+          coloresMano: DEMO_MAPA_CIEGO.coloresMano,
+          vistasNoRenderizadas: DEMO_MAPA_CIEGO.vistasNoRenderizadas,
         },
         {
           slug: "piano-b1-e2-molde-arcilla",

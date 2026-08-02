@@ -28,7 +28,18 @@ export function RenderEjercicio({
         <TecladoAuto
           secuencia={ejercicio.secuencia}
           bpmSugerido={ejercicio.bpmSugerido}
+          rangoTeclado={ejercicio.rangoTeclado}
+          coloresMano={ejercicio.coloresMano}
         />
+      )}
+
+      {/* Vistas declaradas en el ADN que aun no tienen renderer: se informan
+          explicitamente, jamas se omiten en silencio (ADN-DOC-P2). */}
+      {ejercicio.vistasNoRenderizadas && ejercicio.vistasNoRenderizadas.length > 0 && (
+        <p className="mt-3 font-sans text-xs text-[#f3ecdf]/50">
+          Vista declarada en el ADN aún sin renderer:{" "}
+          {ejercicio.vistasNoRenderizadas.join(", ")} (próxima etapa).
+        </p>
       )}
 
       {ejercicio.etiqueta === "INSTRUCCIONAL-FISICO" && <VideoPlaceholder />}

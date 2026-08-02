@@ -46,6 +46,13 @@ export interface Ejercicio {
   bpmSugerido?: number;
   secuencia?: NotaEvento[];
 
+  // Solo para ejercicios gobernados por ADN (Circuito de Demostración ADN):
+  // rango visible normalizado (octavas Do-Si, minimo 2), colores de mano por
+  // palabra del ADN (hand_colors) y vistas declaradas aun sin renderer.
+  rangoTeclado?: { minMidi: number; maxMidi: number };
+  coloresMano?: { derecha: string; izquierda: string };
+  vistasNoRenderizadas?: string[];
+
   // Solo para [HIBRIDO]: la guia de texto que acompana a la parte interactiva.
   guiaTexto?: string;
 
