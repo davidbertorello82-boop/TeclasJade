@@ -1,4 +1,6 @@
-// Tipos neutrales compartidos del ADN Musical (esquema 0.2.2-draft).
+// Tipos neutrales compartidos del ADN Musical (esquemas 0.2.2-draft y
+// 0.3.0-draft; la convivencia de ambas versiones es PERMANENTE, ver la
+// descripción del JSON Schema).
 // SOLO tipos: sin lógica, sin valores, sin dependencias de UI ni de Node.
 // La autoridad estructural en ejecución sigue siendo el JSON Schema
 // (adn-musical/schema/adn-musical.schema.json) y el canon del conocimiento
@@ -21,6 +23,16 @@ export type EtiquetaEvidencia =
 // instrument_realization.kind coincida (la Compuerta B rechaza el uso cruzado).
 export type InstrumentKind = null | "none" | "voice" | "guitar" | "piano";
 
+// Eje de estatus de la demostración (0.3.0-draft): qué es el ADN respecto del
+// ejercicio. `normative` = la secuencia ES el ejercicio · `reference_demonstration`
+// = el ejercicio es físico o conceptual y no tiene música propia ·
+// `possible_realization` = admite muchas realizaciones válidas.
+export type RolDemostracion = "normative" | "reference_demonstration" | "possible_realization";
+
+// Perfil de cobertura contra el que se valida un documento. Ausente = "v0.1",
+// que es la garantía bajo la que nacieron los ADN históricos.
+export type PerfilCobertura = "v0.1" | "v0.2";
+
 // ---------- documento ADN ----------
 
 export interface WrittenPitch {
@@ -41,6 +53,10 @@ export interface EventoAdn {
   beat: string;
   duration: string;
   notes?: NotaAdn[];
+  // Flags de 0.3.0-draft: presentes o ausentes, nunca `false` (el esquema los
+  // fija con `const: true`, para que haya una sola forma de decir cada cosa).
+  rest?: true;
+  tied_from_previous?: true;
 }
 
 export interface VozAdn {
@@ -157,6 +173,10 @@ export interface SemanticaMusical {
 
 export interface AdnDoc {
   schema_version: string;
+  // Obligatorio desde 0.3.0-draft (lo exige la Compuerta B por versión) y
+  // SIEMPRE exigido por la compuerta de build, cualquiera sea la versión.
+  demonstration_role?: RolDemostracion;
+  coverage_profile?: PerfilCobertura;
   exercise: {
     id: string;
     title: string;

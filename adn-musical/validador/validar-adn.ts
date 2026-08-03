@@ -102,8 +102,24 @@ const OPEN_STRING_WRITTEN_MIDI: Record<number, number> = {
 
 // ---------- registro de identificadores basis (mapa cerrado, v2) ----------
 
+// Versión que exige el registro basis v2 en su metadato applies_to_schema_version.
 export const VERSION_ESQUEMA = "0.2.2-draft";
 export const VERSION_REGISTRO = "v2";
+
+// Convivencia PERMANENTE de dos versiones de esquema (David, 03/08/2026).
+// Los pilotos y los fixtures de conformidad se quedan en 0.2.2-draft a
+// propósito: son la suite que prueba el comportamiento anterior, y migrarlos
+// destruiría justamente lo que verifican. NO planificar un lote de migración
+// a const.
+export const VERSIONES_ESQUEMA = ["0.2.2-draft", "0.3.0-draft"] as const;
+// Desde esta versión, demonstration_role es obligatorio para la Compuerta B.
+// La compuerta de BUILD lo exige siempre, sin importar la versión declarada.
+export const VERSION_CON_ESTATUS = "0.3.0-draft";
+export const ROLES_DEMOSTRACION = [
+  "normative",
+  "reference_demonstration",
+  "possible_realization",
+] as const;
 
 export const ETIQUETAS_EVIDENCIA: readonly EtiquetaEvidencia[] = [
   "[verificado]",
@@ -405,6 +421,73 @@ export function validarSemantica(adn: AdnDoc, registro: RegistroBasis): string[]
     }
   }
 
+  // B-9: eje de estatus de la demostración. Obligatorio desde 0.3.0-draft; en
+  // 0.2.2-draft es opcional, y por eso los ADN históricos quedan byte-intactos.
+  // El valor, si está, se valida en cualquier versión.
+  const rol: unknown = adn.demonstration_role;
+  if (rol !== undefined && !(ROLES_DEMOSTRACION as readonly string[]).includes(rol as string)) {
+    errores.push(`/demonstration_role: valor no permitido ${JSON.stringify(rol)}`);
+  } else if (rol === undefined && adn.schema_version === VERSION_CON_ESTATUS) {
+    errores.push(`/demonstration_role: obligatorio desde ${VERSION_CON_ESTATUS}`);
+  }
+
+  // B-10 y B-11: silencios explícitos y ligadura de prolongación.
+  // Ambas reglas se acotan a voces MELÓDICAS (David, 03/08/2026): una voz
+  // percusiva no tiene notas por diseño —el Piloto 1 lo demuestra— y no tiene
+  // altura que prolongar.
+  for (const voz of sem.voices) {
+    const melodica = voz.kind === "melodic";
+    // El orden temporal manda para "el evento anterior de su voz": los eventos
+    // se ordenan por compás y, dentro del compás, por pulso.
+    const enOrden = [...voz.events].sort((x, y) => {
+      if (x.measure !== y.measure) return x.measure - y.measure;
+      return cmp(parseFrac(x.beat), parseFrac(y.beat));
+    });
+    enOrden.forEach((ev, i) => {
+      const ruta = `/musical_semantics/voices/${sem.voices.indexOf(voz)}/events`;
+      const tieneNotas = Array.isArray(ev.notes) && ev.notes.length > 0;
+      // B-10
+      if (ev.rest === true && tieneNotas) {
+        errores.push(`${ruta}: el evento ${ev.id} declara rest y además notes`);
+      }
+      if (melodica && ev.rest !== true && !tieneNotas) {
+        errores.push(`${ruta}: el evento melódico ${ev.id} no tiene notes ni rest`);
+      }
+      // B-11
+      if (ev.tied_from_previous === true) {
+        if (!melodica) {
+          errores.push(`${ruta}: el evento ${ev.id} liga desde el anterior en una voz ${voz.kind} (no hay altura que prolongar)`);
+          return;
+        }
+        if (i === 0) {
+          errores.push(`${ruta}: el evento ${ev.id} es el primero de la voz ${voz.id} y no puede ligar desde el anterior`);
+          return;
+        }
+        const prev = enOrden[i - 1];
+        const firma = (e: EventoAdn): string =>
+          (e.notes ?? [])
+            .map((n) => midiOf(n.written_pitch))
+            .sort((a, b) => a - b)
+            .join(",");
+        if (!tieneNotas || firma(ev) !== firma(prev)) {
+          errores.push(`${ruta}: el evento ligado ${ev.id} no repite las alturas de ${prev.id} (${firma(prev) || "sin notas"} vs ${firma(ev) || "sin notas"})`);
+        }
+        const finPrev = add(
+          mul(sub(parseFrac(prev.beat), frac(1, 1)), bu),
+          parseFrac(prev.duration),
+        );
+        const absPrev = add(mul(frac(prev.measure - 1, 1), durCompas), finPrev);
+        const absIni = add(
+          mul(frac(ev.measure - 1, 1), durCompas),
+          mul(sub(parseFrac(ev.beat), frac(1, 1)), bu),
+        );
+        if (cmp(absPrev, absIni) !== 0) {
+          errores.push(`${ruta}: el evento ligado ${ev.id} arranca en ${fstr(absIni)} y ${prev.id} termina en ${fstr(absPrev)} (deben coincidir)`);
+        }
+      }
+    });
+  }
+
   // B-1/B-3/B-5: estructura — roles únicos, measures en rango y sin repetidos,
   // repeats resoluble, sin autorreferencia y sin ciclos
   const estructura = sem.structure ?? [];
@@ -492,8 +575,17 @@ export function validarSemantica(adn: AdnDoc, registro: RegistroBasis): string[]
       }
     }
   }
+  // C3 (modo pentatónico): capacidad ADMITIDA Y NO VERIFICADA. El esquema
+  // acepta key.mode = "pentatonic_major" con cualquier tónica, y la Compuerta B
+  // NO comprueba que las notas pertenezcan al conjunto de cinco: todavía no hay
+  // casos suficientes para escribir bien esa regla, y una regla a medias
+  // produce rechazos falsos. Declararlo así es más honesto que verificarlo a
+  // medias.
+
   // B-8: exercise_range (voz y piano) es un cálculo automático — toda nota
-  // dentro del rango y AMBAS cotas alcanzadas por alguna nota
+  // dentro del rango y AMBAS cotas alcanzadas por alguna nota. Los eventos
+  // `rest` no aportan alturas: notasPorId solo acumula notas reales, así que
+  // los silencios quedan fuera del cálculo por construcción (probado aparte).
   if ((real.kind === "voice" || real.kind === "piano") && real.exercise_range) {
     const lo = midiOf(real.exercise_range.low);
     const hi = midiOf(real.exercise_range.high);

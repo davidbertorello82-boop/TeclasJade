@@ -1,5 +1,6 @@
 {
-  "schema_version": "0.2.2-draft",
+  "schema_version": "0.3.0-draft",
+  "demonstration_role": "reference_demonstration",
   "exercise": {
     "id": "piano-b1-e1-mapa-ciego",
     "title": "Mapa Ciego del Teclado",

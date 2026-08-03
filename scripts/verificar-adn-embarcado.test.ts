@@ -109,6 +109,34 @@ try {
     const r = verificarAdnEmbarcado(raiz);
     caso("G11: raíz sin JSON embarcados → pasa informándolo", r.ok && r.revisados === 0, r.errores.join(" | "));
   }
+  // --- RT-3: la compuerta de build exige demonstration_role SIEMPRE, sin
+  // importar la schema_version. Cierra el hueco que deja el gate por versión
+  // de la Compuerta B (David, 03/08/2026).
+  {
+    const d = mut();
+    delete d.demonstration_role;
+    const raiz = raizCon("piano", "piano-b1-e1-mapa-ciego.json", JSON.stringify(d, null, 2));
+    const r = verificarAdnEmbarcado(raiz);
+    caso("G12: ADN embarcado sin demonstration_role → build bloqueado", !r.ok && r.errores.some((e) => e.includes("demonstration_role")), r.errores.join(" | "));
+  }
+  {
+    const d = mut();
+    (d as { demonstration_role?: unknown }).demonstration_role = "decorativo";
+    const raiz = raizCon("piano", "piano-b1-e1-mapa-ciego.json", JSON.stringify(d, null, 2));
+    const r = verificarAdnEmbarcado(raiz);
+    caso("G13: demonstration_role inválido → build bloqueado", !r.ok && r.errores.some((e) => e.includes("demonstration_role")), r.errores.join(" | "));
+  }
+  {
+    // Un ADN que declare la versión VIEJA tampoco se cuela: si trae el campo
+    // válido pasa, y si no lo trae lo frena G12 — la exigencia no depende de
+    // la versión declarada.
+    const d = mut();
+    d.schema_version = "0.2.2-draft";
+    d.demonstration_role = "reference_demonstration";
+    const raiz = raizCon("piano", "piano-b1-e1-mapa-ciego.json", JSON.stringify(d, null, 2));
+    const r = verificarAdnEmbarcado(raiz);
+    caso("G14: 0.2.2-draft con demonstration_role válido pasa (exigencia independiente de la versión)", r.ok, r.errores.join(" | "));
+  }
 } finally {
   limpiar();
 }

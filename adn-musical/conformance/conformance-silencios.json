@@ -1,0 +1,81 @@
+{
+  "schema_version": "0.3.0-draft",
+  "demonstration_role": "possible_realization",
+  "coverage_profile": "v0.2",
+  "exercise": {
+    "id": "conformance-silencios",
+    "title": "Conformidad — silencios explícitos (C1)",
+    "source": {
+      "kind": "original",
+      "author": null,
+      "reference": null,
+      "octave_convention": "cientifica",
+      "rights": null
+    },
+    "evidence_default": "[documentado]"
+  },
+  "musical_semantics": {
+    "time": {
+      "signature": "4/4",
+      "beats_per_measure": 4,
+      "beat_unit": "1/4",
+      "bpm": 60,
+      "tempo_term": null
+    },
+    "key": { "tonic": "C", "mode": "major" },
+    "measures": 1,
+    "voices": [
+      {
+        "id": "v1",
+        "kind": "melodic",
+        "events": [
+          {
+            "id": "e01",
+            "measure": 1,
+            "beat": "1/1",
+            "duration": "1/4",
+            "notes": [{ "id": "n01", "written_pitch": { "step": "C", "alter": 0, "octave": 4 } }]
+          },
+          { "id": "e02", "measure": 1, "beat": "2/1", "duration": "1/4", "rest": true },
+          {
+            "id": "e03",
+            "measure": 1,
+            "beat": "3/1",
+            "duration": "1/4",
+            "notes": [{ "id": "n02", "written_pitch": { "step": "G", "alter": 0, "octave": 4 } }]
+          },
+          { "id": "e04", "measure": 1, "beat": "4/1", "duration": "1/4", "rest": true }
+        ]
+      }
+    ]
+  },
+  "instrument_realization": {
+    "kind": "piano",
+    "exercise_range": {
+      "low": { "step": "C", "alter": 0, "octave": 4 },
+      "high": { "step": "G", "alter": 0, "octave": 4 }
+    },
+    "realizations": [
+      { "note_id": "n01", "hand": "right", "finger": 1 },
+      { "note_id": "n02", "hand": "right", "finger": 5 }
+    ]
+  },
+  "text_and_vocal_alignment": null,
+  "presentation_and_rendering": {
+    "type": "reproducible",
+    "views": ["staff_treble", "keyboard"],
+    "controls": ["play", "pause", "restart", "bpm_slider", "loop"],
+    "bpm_initial": 60,
+    "engine_suggested": null,
+    "hand_colors": { "right": "naranja", "left": "azul" }
+  },
+  "evidence_governance": {
+    "aprobado_por_david": false,
+    "listo_para_desarrollo": false,
+    "validacion_profesional": "no-requerida",
+    "transposition_allowed": false,
+    "unknown_notation": [],
+    "unsupported_features": [],
+    "field_evidence": null
+  }
+}

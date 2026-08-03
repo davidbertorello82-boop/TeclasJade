@@ -9,7 +9,9 @@
 // H texto (2) · I defensivos (4) · J field_evidence forma (7) · K mapa
 // cerrado con contexto instrumental (33) · L cargador del registro v2 (22) ·
 // R resolvedor RFC 6901 (14) · S solapamiento (3) · V versión única (5) ·
-// W sincronización (7) · X migración (5) · Y exercise_range (4). Total: 167.
+// W sincronización (7) · X migración (5) · Y exercise_range (4) ·
+// Z RT-3: las cinco capacidades de ADN-HITO-2, con la no regresión de los
+// SIETE ADN existentes al frente. El total lo imprime la propia suite.
 // Uso: npm run test:cobertura-adn — exit 0 solo si TODOS los casos pasan.
 
 import * as fs from "node:fs";
@@ -22,7 +24,8 @@ import {
   validarData,
   type AdnDoc,
 } from "./validar-adn";
-import { coberturaData } from "./cobertura-v01";
+import { coberturaData, resolverPerfil } from "./cobertura-v01";
+import type { PerfilCobertura } from "../tipos/adn-tipos";
 
 const BASE = path.join(__dirname, "..");
 const rutas = {
@@ -822,16 +825,31 @@ caso("S1: ['a','b'] y ['a','bc'] no solapan", compararSolapamiento(["a", "b"], [
 caso("S2: índices '1' y '10' no solapan", compararSolapamiento(["a", "1"], ["a", "10"]) === "ninguno");
 caso("S3: ['a','b'] y ['a','b','c'] solapan y el más específico es el segundo", compararSolapamiento(["a", "b"], ["a", "b", "c"]) === "b_mas_especifico");
 
-// ---------- V. versión única del esquema ----------
+// ---------- V. versiones vivas del esquema ----------
+// Desde RT-3 conviven DOS versiones de forma permanente (0.2.2-draft y
+// 0.3.0-draft). Los pilotos y los fixtures de conformidad se quedan en
+// 0.2.2-draft a propósito: son la suite que prueba el comportamiento anterior.
 
 {
   const d = copia(cargar(rutas.p1));
   caso("V1: 0.2.2-draft es la versión aceptada", d.schema_version === "0.2.2-draft" && b(d).length === 0, `${d.schema_version} | ${b(d).join(" | ")}`);
 }
-for (const mala of ["0.2.1-draft", "0.2.0-draft", "0.2.2", "0.3.0-draft"]) {
+for (const mala of ["0.2.1-draft", "0.2.0-draft", "0.2.2", "0.4.0-draft"]) {
   const d = copia(cargar(rutas.p1));
   d.schema_version = mala;
   caso(`V: schema_version ${mala} rechazada`, rutaEstructural(b(d), "/schema_version"), b(d).join(" | "));
+}
+{
+  // 0.3.0-draft SÍ es aceptada por el esquema, y arrastra la obligación de
+  // demonstration_role: sin el campo la Compuerta B la rechaza por B-9, no por
+  // versión. Ese es exactamente el contrato de la convivencia.
+  const d = copia(cargar(rutas.p1));
+  d.schema_version = "0.3.0-draft";
+  caso(
+    "V6: 0.3.0-draft es versión válida y exige demonstration_role",
+    !rutaEstructural(b(d), "/schema_version") && rutaExacta(b(d), "/demonstration_role"),
+    b(d).join(" | "),
+  );
 }
 
 // ---------- W. sincronización registro ↔ esquema ↔ SKILL ----------
@@ -873,11 +891,20 @@ for (const mala of ["0.2.1-draft", "0.2.0-draft", "0.2.2", "0.3.0-draft"]) {
     carga.ok && entradasReg.length === 9,
     detalleDe(carga),
   );
-  const constVersion = ((schemaJson.properties as Record<string, unknown>).schema_version as Record<string, unknown>).const;
+  // El esquema pasó de `const` a `enum` (convivencia permanente de versiones):
+  // la sincronía ahora exige que la versión declarada por el registro sea UNA
+  // de las vivas, y que el enum sea exactamente el conjunto esperado.
+  const enumVersiones = ((schemaJson.properties as Record<string, unknown>).schema_version as Record<string, unknown>).enum;
+  const versionesEsquema = Array.isArray(enumVersiones) ? (enumVersiones as unknown[]).map(String) : [];
   caso(
-    "W6: applies_to_schema_version del registro == const de schema_version del esquema",
-    carga.ok && carga.registro.appliesToSchemaVersion === constVersion,
-    `registro=${carga.ok ? carga.registro.appliesToSchemaVersion : "?"} esquema=${String(constVersion)}`,
+    "W6: applies_to_schema_version del registro pertenece al enum de schema_version",
+    carga.ok && versionesEsquema.includes(carga.registro.appliesToSchemaVersion),
+    `registro=${carga.ok ? carga.registro.appliesToSchemaVersion : "?"} esquema=[${versionesEsquema.join(", ")}]`,
+  );
+  caso(
+    "W6-bis: el enum del esquema son exactamente las dos versiones vivas",
+    versionesEsquema.length === 2 && versionesEsquema.includes("0.2.2-draft") && versionesEsquema.includes("0.3.0-draft"),
+    `[${versionesEsquema.join(", ")}]`,
   );
   caso(
     "W7: contextos instrumentales de la tabla ejecutable del SKILL == registro",
@@ -923,6 +950,194 @@ for (const rutaDoc of Object.values(rutas)) {
   const d = copia(cargar(rutaEsperado));
   req(d.instrument_realization.exercise_range, "exercise_range").high = { step: "F", alter: 0, octave: 4 };
   caso("Y4: cota superior no alcanzada rechazada (voz)", rutaExacta(b(d), "/instrument_realization/exercise_range/high"), b(d).join(" | "));
+}
+
+// ---------- Z. RT-3: las cinco capacidades de ADN-HITO-2 ----------
+// Los fixtures nuevos viven en conformance/ y declaran 0.3.0-draft + v0.2.
+
+const rutasNuevas = {
+  sil: path.join(BASE, "conformance", "conformance-silencios.json"),
+  lig: path.join(BASE, "conformance", "conformance-ligadura.json"),
+  pen: path.join(BASE, "conformance", "conformance-pentatonico.json"),
+  dva: path.join(BASE, "conformance", "conformance-dos-voces-acorde.json"),
+};
+const a2p = (d: unknown, p: PerfilCobertura) => coberturaData(d, p);
+
+// --- Z-NR: no regresión, los SIETE ADN existentes conservan su veredicto ---
+{
+  const siete: Array<[string, string]> = [
+    ["piloto-1 (percusivo)", rutas.p1],
+    ["piloto-2", rutas.p2],
+    ["piloto-3", rutas.p3],
+    ["conformance-alteraciones", rutas.ca],
+    ["conformance-piano", rutas.cp],
+    ["esperado.json", rutaEsperado],
+    ["mapa-ciego embarcado", path.join(BASE, "..", "src", "lib", "aulas", "piano", "adn", "piano-b1-e1-mapa-ciego.json")],
+  ];
+  for (const [nombre, ruta] of siete) {
+    const d = cargar(ruta);
+    caso(`Z-NR ${nombre}: sigue pasando B y A2 v0.1 sin tocarlo`, pasaAmbas(d), detalles(d));
+  }
+}
+
+// --- C1: silencios explícitos ---
+{
+  const d = cargar(rutasNuevas.sil);
+  caso("Z-C1a: pieza con silencios pasa B y A2 v0.2", b(d).length === 0 && a2(d).length === 0, detalles(d));
+}
+{
+  const d = copia(cargar(rutasNuevas.sil));
+  d.musical_semantics.voices[0].events[1].notes = [
+    { id: "nX", written_pitch: { step: "D", alter: 0, octave: 4 } },
+  ];
+  caso("Z-C1b: rest + notes juntos rechazado", tiene(b(d), "declara rest y además notes"), b(d).join(" | "));
+}
+{
+  const d = copia(cargar(rutasNuevas.sil));
+  delete d.musical_semantics.voices[0].events[1].rest;
+  caso("Z-C1c: evento melódico sin notes ni rest rechazado", tiene(b(d), "no tiene notes ni rest"), b(d).join(" | "));
+}
+{
+  const d = copia(cargar(rutasNuevas.sil));
+  d.musical_semantics.voices[0].events[3].duration = "1/8";
+  caso("Z-C1d: el compás no cierra contando los silencios", tiene(b(d), "la suma de duraciones es"), b(d).join(" | "));
+}
+{
+  // El rango ignora los silencios: sigue calculándose solo sobre notas reales.
+  const d = cargar(rutasNuevas.sil);
+  caso("Z-C1e: exercise_range ignora los eventos rest", b(d).length === 0, b(d).join(" | "));
+}
+{
+  // El Piloto 1 percusivo admite rest sin exigir notas (acotación aprobada).
+  const d = copia(cargar(rutas.p1));
+  d.coverage_profile = "v0.2";
+  d.schema_version = "0.3.0-draft";
+  d.demonstration_role = "normative";
+  d.musical_semantics.voices[0].events[0].rest = true;
+  caso("Z-C1f: voz percusiva admite rest sin notas", b(d).length === 0, b(d).join(" | "));
+}
+
+// --- C2: ligadura de prolongación ---
+{
+  const d = cargar(rutasNuevas.lig);
+  caso("Z-C2a: dos eventos ligados de 4+4 pulsos pasan ambas", b(d).length === 0 && a2(d).length === 0, detalles(d));
+}
+{
+  const d = copia(cargar(rutasNuevas.lig));
+  req(d.musical_semantics.voices[0].events[1].notes, "notes")[0].written_pitch = { step: "D", alter: 0, octave: 4 };
+  caso("Z-C2b: alturas distintas al anterior rechazado", tiene(b(d), "no repite las alturas de"), b(d).join(" | "));
+}
+{
+  const d = copia(cargar(rutasNuevas.lig));
+  d.musical_semantics.voices[0].events[0].duration = "2/4";
+  caso("Z-C2c: hueco temporal antes del ligado rechazado", tiene(b(d), "deben coincidir") || tiene(b(d), "la suma de duraciones es"), b(d).join(" | "));
+}
+{
+  const d = copia(cargar(rutasNuevas.lig));
+  d.musical_semantics.voices[0].events[0].tied_from_previous = true;
+  caso("Z-C2d: flag en el primer evento de la voz rechazado", tiene(b(d), "no puede ligar desde el anterior"), b(d).join(" | "));
+}
+{
+  const d = copia(cargar(rutas.p1));
+  d.schema_version = "0.3.0-draft";
+  d.demonstration_role = "normative";
+  d.musical_semantics.voices[0].events[1].tied_from_previous = true;
+  caso("Z-C2e: ligadura en voz percusiva rechazada", tiene(b(d), "no hay altura que prolongar"), b(d).join(" | "));
+}
+
+// --- C3: modo pentatónico ---
+{
+  const d = cargar(rutasNuevas.pen);
+  caso("Z-C3a: pentatonic_major con tónica F# pasa ambas", b(d).length === 0 && a2(d).length === 0, detalles(d));
+}
+{
+  const d = copia(cargar(rutasNuevas.pen));
+  req(d.musical_semantics.key, "key").mode = "pentatonic_minor";
+  caso("Z-C3b: modo fuera del enum rechazado", rutaEstructural(b(d), "/musical_semantics/key/mode"), b(d).join(" | "));
+}
+
+// --- C4: eje de estatus de tres valores ---
+{
+  for (const rol of ["normative", "reference_demonstration", "possible_realization"] as const) {
+    const d = copia(cargar(rutasNuevas.pen));
+    d.demonstration_role = rol;
+    caso(`Z-C4a(${rol}): valor admitido`, b(d).length === 0, b(d).join(" | "));
+  }
+}
+{
+  const d = copia(cargar(rutasNuevas.pen));
+  delete d.demonstration_role;
+  caso("Z-C4b: ausente en 0.3.0-draft rechazado", rutaExacta(b(d), "/demonstration_role"), b(d).join(" | "));
+}
+{
+  const d = copia(cargar(rutasNuevas.pen));
+  (d as { demonstration_role?: unknown }).demonstration_role = "decorativo";
+  caso("Z-C4c: valor fuera del enum rechazado", rutaEstructural(b(d), "/demonstration_role"), b(d).join(" | "));
+}
+{
+  // Convivencia permanente: en 0.2.2-draft el campo es OPCIONAL, y por eso los
+  // ADN históricos quedan byte-intactos.
+  const d = cargar(rutas.cp);
+  caso("Z-C4d: 0.2.2-draft sin demonstration_role sigue válido", b(d).length === 0, b(d).join(" | "));
+}
+{
+  const d = copia(cargar(rutas.cp));
+  d.demonstration_role = "normative";
+  caso("Z-C4e: 0.2.2-draft acepta el campo si se declara", b(d).length === 0, b(d).join(" | "));
+}
+
+// --- C5: perfiles de cobertura y su resolución ---
+{
+  const d = cargar(rutasNuevas.dva);
+  caso("Z-C5a: dos voces con acorde en 3/4 pasan v0.2", a2(d).length === 0, a2(d).join(" | "));
+}
+{
+  const d = cargar(rutasNuevas.dva);
+  caso("Z-C5b: el mismo ADN bajo v0.1 es rechazado", a2p(d, "v0.1").length > 0, "no rechazó");
+}
+{
+  const d = cargar(rutas.cp);
+  caso("Z-C5c: el parámetro gana sobre el campo del documento", resolverPerfil(d, "v0.2").origen === "parámetro" && resolverPerfil(d, "v0.2").perfil === "v0.2");
+}
+{
+  const d = cargar(rutasNuevas.dva);
+  caso("Z-C5d: sin parámetro manda el campo del documento", resolverPerfil(d).perfil === "v0.2" && resolverPerfil(d).origen === "campo del documento");
+}
+{
+  const d = cargar(rutas.cp);
+  caso("Z-C5e: sin campo ni parámetro, el default es v0.1", resolverPerfil(d).perfil === "v0.1" && resolverPerfil(d).origen === "default");
+}
+{
+  const d = copia(cargar(rutas.cp));
+  (d as { coverage_profile?: unknown }).coverage_profile = "v9";
+  caso("Z-C5f: coverage_profile inválido se reporta, no se ignora", tiene(a2(d), "/coverage_profile"), a2(d).join(" | "));
+}
+{
+  const d = copia(cargar(rutasNuevas.sil));
+  d.coverage_profile = "v0.1";
+  caso("Z-C5g: rest bajo v0.1 se rechaza explícitamente", tiene(a2(d), "requieren el perfil v0.2"), a2(d).join(" | "));
+}
+{
+  const d = copia(cargar(rutasNuevas.lig));
+  d.coverage_profile = "v0.1";
+  caso("Z-C5h: tied_from_previous bajo v0.1 se rechaza explícitamente", tiene(a2(d), "requiere el perfil v0.2"), a2(d).join(" | "));
+}
+{
+  const d = copia(cargar(rutasNuevas.dva));
+  d.musical_semantics.time = { signature: "7/8", beats_per_measure: 7, beat_unit: "1/8", bpm: 72, tempo_term: null };
+  caso("Z-C5i: métrica fuera de {4/4, 3/4, 2/4} rechazada en v0.2", tiene(a2(d), "métrica no soportada en v0.2"), a2(d).join(" | "));
+}
+{
+  const d = copia(cargar(rutasNuevas.dva));
+  d.musical_semantics.anacrusis = { beats: 1 };
+  caso("Z-C5j: anacrusa sigue rechazada en v0.2", tiene(a2(d), "/musical_semantics/anacrusis"), a2(d).join(" | "));
+}
+
+// --- Z-V: el esquema admite exactamente las dos versiones vivas ---
+{
+  const d = copia(cargar(rutas.cp));
+  d.schema_version = "0.9.9-draft";
+  caso("Z-V1: versión de esquema desconocida rechazada", rutaEstructural(b(d), "/schema_version"), b(d).join(" | "));
 }
 
 console.log("");

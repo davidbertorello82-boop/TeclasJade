@@ -16,14 +16,16 @@ import * as crypto from "node:crypto";
 import * as fs from "node:fs";
 import * as path from "node:path";
 import { coberturaData } from "../adn-musical/validador/cobertura-v01";
-import { validarData } from "../adn-musical/validador/validar-adn";
+import { ROLES_DEMOSTRACION, validarData } from "../adn-musical/validador/validar-adn";
 import type { AdnDoc } from "../adn-musical/tipos/adn-tipos";
 import { adaptarAdnPiano, AdnNoSoportadoError } from "../src/lib/adn/adaptarAdnPiano";
 import { buscarEjercicio } from "../src/lib/aulas/piano/contenido";
 
 // SHA-256 aprobados de las copias canónicas embarcadas (pin contra el vault).
 const SHAS_CANON: Record<string, string> = {
-  "piano-b1-e1-mapa-ciego.json": "3998DBFAA0E4A2A91B8C94316A79115C412D64C8BDC202089895FC54FC9CCDD5",
+  // RT-3 (03/08/2026): migrado a 0.3.0-draft + demonstration_role. El SHA
+  // anterior era 3998DBFA…FC9CCDD5, de la versión 0.2.2-draft sin estatus.
+  "piano-b1-e1-mapa-ciego.json": "EE35888B37276E41F41EC05BBA7BAC537F421AE9D331C6CC451ED16CDB39BB17",
 };
 
 export interface ResultadoCompuerta {
@@ -77,6 +79,16 @@ export function verificarAdnEmbarcado(raiz?: string, exigirPins?: boolean): Resu
         errores.push(`${rel}: Compuerta A2 — ${errsA2.join(" | ")}`);
         continue;
       }
+      // Cierre del hueco de versión (David, 03/08/2026): la Compuerta B exige
+      // demonstration_role solo desde 0.3.0-draft, así que un ADN que declarara
+      // 0.2.2-draft podría llegar a producción sin estatus y sin que nada lo
+      // note. ESTA compuerta lo exige SIEMPRE, cualquiera sea la versión.
+      const rol: unknown = (data as { demonstration_role?: unknown }).demonstration_role;
+      if (typeof rol !== "string" || !(ROLES_DEMOSTRACION as readonly string[]).includes(rol)) {
+        errores.push(`${rel}: demonstration_role ausente o inválido (${JSON.stringify(rol)}) — exigido siempre en producción, sin importar la schema_version`);
+        continue;
+      }
+
       const adn = data as AdnDoc; // la Compuerta B acaba de garantizar la forma
       const gob = adn.evidence_governance;
       if (gob.aprobado_por_david !== true) errores.push(`${rel}: aprobado_por_david debe ser true`);

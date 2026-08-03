@@ -2,12 +2,14 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "adn-musical.schema.json",
   "title": "ADN Musical de Teclas Jade",
-  "description": "Esquema v0.2.2-draft. Valida la instancia JSON de un ejercicio en las cinco capas de la Arquitectura del Compilador de ADN Musical v0.2. El Piloto 1 canónico del vault es fixture de conformidad obligatorio de este esquema. El vocabulario de identificadores basis vive en evidence-basis.v2.json (v2, con contexto instrumental; copia ejecutable derivada del registro canónico del vault — v1 se conserva como antecedente).",
+  "description": "Esquema v0.2.2-draft y v0.3.0-draft. CONVIVENCIA PERMANENTE, NO TRANSITORIA: los pilotos y los fixtures de conformidad históricos se quedan en 0.2.2-draft a propósito, porque son la suite que prueba el comportamiento anterior y migrarlos destruiría justamente lo que verifican. NO planificar un lote de migración a const. Valida la instancia JSON de un ejercicio en las cinco capas de la Arquitectura del Compilador de ADN Musical v0.2. El Piloto 1 canónico del vault es fixture de conformidad obligatorio de este esquema. El vocabulario de identificadores basis vive en evidence-basis.v2.json (v2, con contexto instrumental; copia ejecutable derivada del registro canónico del vault — v1 se conserva como antecedente).",
   "type": "object",
   "required": ["schema_version", "exercise", "musical_semantics", "instrument_realization", "text_and_vocal_alignment", "presentation_and_rendering", "evidence_governance"],
   "additionalProperties": false,
   "properties": {
-    "schema_version": { "const": "0.2.2-draft" },
+    "schema_version": { "enum": ["0.2.2-draft", "0.3.0-draft"] },
+    "demonstration_role": { "enum": ["normative", "reference_demonstration", "possible_realization"] },
+    "coverage_profile": { "enum": ["v0.1", "v0.2"] },
     "exercise": {
       "type": "object",
       "required": ["id", "title", "source"],
@@ -53,7 +55,7 @@
           "additionalProperties": false,
           "properties": {
             "tonic": { "type": "string", "pattern": "^[A-G](#|b)?$" },
-            "mode": { "enum": ["major", "minor"] }
+            "mode": { "enum": ["major", "minor", "pentatonic_major"] }
           }
         },
         "measures": { "type": "integer", "minimum": 1 },
@@ -202,7 +204,9 @@
         "measure": { "type": "integer", "minimum": 1 },
         "beat": { "$ref": "#/$defs/fraction" },
         "duration": { "$ref": "#/$defs/fraction" },
-        "notes": { "type": "array", "items": { "$ref": "#/$defs/note" }, "minItems": 1 }
+        "notes": { "type": "array", "items": { "$ref": "#/$defs/note" }, "minItems": 1 },
+        "rest": { "const": true },
+        "tied_from_previous": { "const": true }
       }
     },
     "voice": {
