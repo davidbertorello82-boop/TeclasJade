@@ -52,7 +52,11 @@ const SECUENCIA_APROBADA: NotaEvento[] = [
 ];
 // Huellas congeladas de las TRES secuencias antiguas que NO se migran.
 const HASH_LEGADO: Record<string, string> = {
-  "piano-b1-e3-espejo-agua": "B0C90CAA74618AAE84A4627B14502EE7000572A51789453FCB05D92B417ACF40",
+  // Corregida en el Lote I (03/08/2026): movimiento contrario con digitacion
+  // espejada —ambas manos con el mismo dedo—. El valor anterior era
+  // B0C90CAA74618AAE84A4627B14502EE7000572A51789453FCB05D92B417ACF40, con la
+  // mano izquierda invertida por aplicar 6 - dedo a un movimiento contrario.
+  "piano-b1-e3-espejo-agua": "DD98217A82CFFB34C9F07E3ADBA558CFD338B43A7B2C927E1C6AF87F81972A8B",
   "piano-b1-e4-dialogo-compartido": "5DBCF6DF0A4AE9B25BFD209541E98F575128E5EBC9768530796993CC39A5C37A",
   "piano-b1-lab-teclas-negras": "B85B51796C84EBC016B79C124DB43E720C7EF9E3D1B44501ED8D014C8AF44311",
 };

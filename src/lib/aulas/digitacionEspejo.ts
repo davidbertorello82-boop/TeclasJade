@@ -1,23 +1,35 @@
-// Formula de digitacion espejo (doc 10, seccion 9, DECIDIDO 10/07).
+// Digitacion de ejercicios a dos manos (doc 10, seccion 9, DECIDIDO 10/07,
+// CORREGIDO 03/08/2026).
 //
-// Para todo ejercicio a dos manos marcado como "espejo" (movimiento simetrico,
-// tipo Hanon), la digitacion de la mano izquierda se CALCULA a partir de la
-// derecha, no se carga a mano por duplicado:
+// La derivacion del dedo de la mano izquierda depende del TIPO DE MOVIMIENTO,
+// no de la etiqueta "espejo" a secas:
 //
-//     dedo de la mano opuesta = 6 - dedo original
+//   paralelo  — las dos manos tocan las mismas notas en la misma direccion.
+//               Los dedos se espejan: dedo opuesto = 6 - dedo original, de modo
+//               que el pulgar (1) de una mano corresponde al menique (5) de la
+//               otra (6-1=5), el 2 con el 4, y el 3 consigo mismo.
 //
-// Asi el pulgar (1) de una mano se refleja con el menique (5) de la otra
-// (6-1=5), el 2 con el 4 (6-2=4), y el 3 consigo mismo (6-3=3).
+//   contrario — las manos se separan y vuelven (tipo "El Espejo de Agua").
+//               Las dos usan EL MISMO DEDO al mismo tiempo: ambos pulgares
+//               arrancan juntos y ambos meniques llegan juntos a los extremos.
+//               Aplicar 6 - dedo a un movimiento contrario dejaria la mano
+//               izquierda invertida —menique en la nota mas aguda y pulgar en
+//               la mas grave—, que es anatomicamente incorrecto.
+//
+// El modo NO tiene valor por defecto: quien llama DECLARA el tipo de
+// movimiento, y el compilador frena a quien lo omita.
 
 import type { Dedo, NotaEvento } from "./tipos";
 
-export function dedoEspejo(dedo: Dedo): Dedo {
-  return (6 - dedo) as Dedo;
+export type ModoEspejo = "paralelo" | "contrario";
+
+export function dedoEspejo(dedo: Dedo, modo: ModoEspejo): Dedo {
+  return modo === "paralelo" ? ((6 - dedo) as Dedo) : dedo;
 }
 
-// Un paso de un ejercicio espejo: se carga SOLO la mano derecha (pitch + dedo)
-// y el pitch que le toca a la izquierda; el dedo de la izquierda lo deriva la
-// formula. Esto reduce a la mitad la carga de digitacion para estos ejercicios.
+// Un paso de un ejercicio a dos manos: se carga SOLO la mano derecha (pitch +
+// dedo) y el pitch que le toca a la izquierda; el dedo de la izquierda lo
+// deriva el modo. Esto reduce a la mitad la carga de digitacion.
 export interface PasoEspejo {
   inicioBeat: number;
   duracionBeat: number;
@@ -26,9 +38,9 @@ export interface PasoEspejo {
   pitchIzquierda: number;
 }
 
-// Expande los pasos espejo en la secuencia completa de NotaEvento (una nota
-// para cada mano), aplicando 6 - dedo para la mano izquierda.
-export function expandirEspejo(pasos: PasoEspejo[]): NotaEvento[] {
+// Expande los pasos en la secuencia completa de NotaEvento (una nota para cada
+// mano), derivando el dedo de la izquierda segun el modo declarado.
+export function expandirEspejo(pasos: PasoEspejo[], modo: ModoEspejo): NotaEvento[] {
   return pasos.flatMap((paso) => [
     {
       pitchMidi: paso.pitchDerecha,
@@ -40,7 +52,7 @@ export function expandirEspejo(pasos: PasoEspejo[]): NotaEvento[] {
     {
       pitchMidi: paso.pitchIzquierda,
       mano: "MI" as const,
-      dedo: dedoEspejo(paso.dedoDerecha),
+      dedo: dedoEspejo(paso.dedoDerecha, modo),
       inicioBeat: paso.inicioBeat,
       duracionBeat: paso.duracionBeat,
     },

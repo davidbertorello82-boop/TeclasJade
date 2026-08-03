@@ -17,7 +17,7 @@ import { adaptarAdnPiano } from "../../adn/adaptarAdnPiano";
 import adnMapaCiego from "./adn/piano-b1-e1-mapa-ciego.json";
 
 // --- Notas MIDI usadas (C4 = 60 = Do central) ---
-const C3 = 48, E3 = 52, F3 = 53, G3 = 55, A3 = 57, B3 = 59;
+const C3 = 48, D3 = 50, E3 = 52, F3 = 53, G3 = 55;
 const C4 = 60, D4 = 62, E4 = 64, F4 = 65, G4 = 67;
 // Teclas negras (para el laboratorio de teclas negras):
 const Fs3 = 54, Gs3 = 56, As3 = 58; // grupo grave de 3 negras: Fa#-Sol#-La#
@@ -29,23 +29,25 @@ const Cs4 = 61, Ds4 = 63, Fs4 = 66, Gs4 = 68, As4 = 70; // negras agudas
 // compuerta de prebuild) via el adaptador puro.
 const DEMO_MAPA_CIEGO = adaptarAdnPiano(adnMapaCiego as unknown as AdnDoc);
 
-// Ejercicio 3 — El Espejo de Agua (movimiento contrario). Ejercicio "espejo":
-// se carga SOLO la digitacion de la mano derecha; la izquierda la deriva la
-// formula 6 - dedo (doc 10, seccion 9). Movimiento simetrico hacia afuera y
-// vuelta, ambas manos partiendo del centro.
+// Ejercicio 3 — El Espejo de Agua (MOVIMIENTO CONTRARIO, corregido 03/08/2026).
+// Cada mano en su posicion de cinco dedos de Do —izquierda C3-G3, derecha
+// C4-G4— y ambas parten del pulgar abriendose hacia afuera. En movimiento
+// contrario las dos manos usan EL MISMO DEDO al mismo tiempo (modo
+// "contrario"), no 6 - dedo: esa formula es para movimiento paralelo y aca
+// dejaria la izquierda invertida. Ver doc 10, seccion 9 y su correccion.
 const SEC_ESPEJO_AGUA: NotaEvento[] = expandirEspejo([
-  // salida hacia afuera
-  { inicioBeat: 0, duracionBeat: 1, pitchDerecha: C4, dedoDerecha: 1, pitchIzquierda: B3 },
-  { inicioBeat: 1, duracionBeat: 1, pitchDerecha: D4, dedoDerecha: 2, pitchIzquierda: A3 },
-  { inicioBeat: 2, duracionBeat: 1, pitchDerecha: E4, dedoDerecha: 3, pitchIzquierda: G3 },
-  { inicioBeat: 3, duracionBeat: 1, pitchDerecha: F4, dedoDerecha: 4, pitchIzquierda: F3 },
-  { inicioBeat: 4, duracionBeat: 1, pitchDerecha: G4, dedoDerecha: 5, pitchIzquierda: E3 },
-  // vuelta al centro
-  { inicioBeat: 5, duracionBeat: 1, pitchDerecha: F4, dedoDerecha: 4, pitchIzquierda: F3 },
-  { inicioBeat: 6, duracionBeat: 1, pitchDerecha: E4, dedoDerecha: 3, pitchIzquierda: G3 },
-  { inicioBeat: 7, duracionBeat: 1, pitchDerecha: D4, dedoDerecha: 2, pitchIzquierda: A3 },
-  { inicioBeat: 8, duracionBeat: 2, pitchDerecha: C4, dedoDerecha: 1, pitchIzquierda: B3 },
-]);
+  // salida hacia afuera (las manos se separan)
+  { inicioBeat: 0, duracionBeat: 1, pitchDerecha: C4, dedoDerecha: 1, pitchIzquierda: G3 },
+  { inicioBeat: 1, duracionBeat: 1, pitchDerecha: D4, dedoDerecha: 2, pitchIzquierda: F3 },
+  { inicioBeat: 2, duracionBeat: 1, pitchDerecha: E4, dedoDerecha: 3, pitchIzquierda: E3 },
+  { inicioBeat: 3, duracionBeat: 1, pitchDerecha: F4, dedoDerecha: 4, pitchIzquierda: D3 },
+  { inicioBeat: 4, duracionBeat: 1, pitchDerecha: G4, dedoDerecha: 5, pitchIzquierda: C3 },
+  // vuelta al centro (las manos se cierran)
+  { inicioBeat: 5, duracionBeat: 1, pitchDerecha: F4, dedoDerecha: 4, pitchIzquierda: D3 },
+  { inicioBeat: 6, duracionBeat: 1, pitchDerecha: E4, dedoDerecha: 3, pitchIzquierda: E3 },
+  { inicioBeat: 7, duracionBeat: 1, pitchDerecha: D4, dedoDerecha: 2, pitchIzquierda: F3 },
+  { inicioBeat: 8, duracionBeat: 2, pitchDerecha: C4, dedoDerecha: 1, pitchIzquierda: G3 },
+], "contrario");
 
 // Ejercicio 4 — El Dialogo Compartido (ensamble a 4 manos). La mano derecha
 // lleva una melodia simple; la izquierda sostiene el pulso con un bajo estable
@@ -130,7 +132,7 @@ export const AULA_PIANO: Aula = {
           concepto:
             "El cerebro procesa más rápido el movimiento simétrico que el paralelo; el movimiento contrario programa la coordinación bilateral.",
           consigna:
-            "Ambos pulgares sobre el Do central. Tocá simétricamente hacia afuera y volvé, con ambas manos a la vez. La digitación de la mano izquierda es el espejo de la derecha (6 − dedo).",
+            "El pulgar de la mano derecha parte de Do4, el Do central, y sube hasta Sol4 para volver. El pulgar de la mano izquierda parte de Sol3 y baja hasta Do3 para volver. Las dos manos se abren y se cierran a la vez, con los mismos dedos.",
           autoevaluacion:
             "Clic de coincidencia: el impacto de ambas manos debe sonar como un único golpe; si se oyen dos sonidos separados, no están coordinadas.",
           bpmSugerido: 60,
