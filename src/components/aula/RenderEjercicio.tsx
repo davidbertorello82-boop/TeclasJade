@@ -3,6 +3,7 @@
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import type { Ejercicio } from "@/lib/aulas/tipos";
+import type { InstrumentoAula } from "@/lib/audio/motorAudio";
 import { marcarEjercicioCompletado } from "@/lib/aulas/acciones";
 import { TecladoAuto } from "./TecladoAuto";
 
@@ -13,9 +14,13 @@ import { TecladoAuto } from "./TecladoAuto";
 export function RenderEjercicio({
   ejercicio,
   yaCompletado,
+  instrumento = "piano",
 }: {
   ejercicio: Ejercicio;
   yaCompletado: boolean;
+  // Instrumento del aula que contiene al ejercicio (el aula de Guitarra lo
+  // pasara cuando exista su ruta interactiva).
+  instrumento?: InstrumentoAula;
 }) {
   const esInteractivo =
     ejercicio.etiqueta === "DIGITAL-INTERACTIVO" ||
@@ -30,6 +35,7 @@ export function RenderEjercicio({
           bpmSugerido={ejercicio.bpmSugerido}
           rangoTeclado={ejercicio.rangoTeclado}
           coloresMano={ejercicio.coloresMano}
+          instrumento={instrumento}
         />
       )}
 

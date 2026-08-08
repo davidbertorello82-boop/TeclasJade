@@ -2,12 +2,21 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import type { Mano, NotaEvento } from "@/lib/aulas/tipos";
+import {
+  crearMotorAudio,
+  crearMotorRespaldo,
+  type InstrumentoAula,
+  type MotorAudio,
+} from "@/lib/audio/motorAudio";
 
 // Teclado virtual que se toca solo (doc 10, secciones 8 y 10).
 // Reproduce la secuencia del ejercicio al BPM elegido, pinta cada tecla con el
 // color canonico de su mano mientras suena SU DURACION REAL, y muestra el
 // numero de dedo (M.D./M.I.) encima. Rango dinamico: octavas completas Do-Si
 // con minimo pedagogico de dos (fallback C3-B4 para ejercicios sin ADN).
+// El sonido sale del motor de samples reales (lote SONIDO-1: smplr con piano
+// de dominio publico y guitarra CC-BY self-hosteados); si los samples no
+// cargan, cae al respaldo sintetizado para no dejar el aula muda.
 // CERO deteccion de lo que el alumno toca: solo demuestra (regla de solo
 // demostracion, doc 10 seccion 8 / decision canonica 20).
 
@@ -27,9 +36,20 @@ const RANGO_FALLBACK = { minMidi: 48, maxMidi: 71 };
 const PC_BLANCAS = new Set([0, 2, 4, 5, 7, 9, 11]);
 const NOMBRES = ["Do", "Do#", "Re", "Re#", "Mi", "Fa", "Fa#", "Sol", "Sol#", "La", "La#", "Si"];
 
-function midiAFrecuencia(midi: number): number {
-  return 440 * Math.pow(2, (midi - 69) / 12);
-}
+// Anticipacion con que se agenda cada nota sobre el reloj de audio, donde cae
+// con precision de sample. DEBE ser menor que los 200 ms del lookahead interno
+// de smplr: asi el despacho es sincronico y ninguna nota pasa por su timer JS
+// (verificacion adversarial del lote SONIDO-1). Si el BPM cambia en pleno
+// vuelo, lo ya agendado conserva el tempo anterior a lo sumo este intervalo.
+const LOOKAHEAD_SEG = 0.15;
+// Tope del dt entre frames: con la pestana en segundo plano el rAF se congela
+// pero el AudioContext sigue corriendo; sin tope, al volver se dispararian en
+// rafaga todas las notas del tiempo oculto (revision adversarial del lote).
+const DT_MAX_SEG = 0.25;
+// Si los samples no llegan en este plazo, el aula suena con el respaldo.
+const CARGA_TIMEOUT_MS = 20000;
+
+type EstadoSonido = "cargando" | "listo" | "respaldo";
 
 function nombreNota(midi: number): string {
   return `${NOMBRES[midi % 12]}${Math.floor(midi / 12) - 1}`;
@@ -38,11 +58,6 @@ function nombreNota(midi: number): string {
 interface TeclaActiva {
   mano: Mano;
   dedo: number;
-}
-
-interface FuenteActiva {
-  osc: OscillatorNode;
-  gain: GainNode;
 }
 
 function firmaActivas(activas: Record<number, TeclaActiva>): string {
@@ -57,16 +72,20 @@ export function TecladoAuto({
   bpmSugerido,
   rangoTeclado,
   coloresMano,
+  instrumento = "piano",
 }: {
   secuencia: NotaEvento[];
   bpmSugerido: number;
   rangoTeclado?: { minMidi: number; maxMidi: number };
   coloresMano?: { derecha: string; izquierda: string };
+  instrumento?: InstrumentoAula;
 }) {
   const [bpm, setBpm] = useState(bpmSugerido);
   const [reproduciendo, setReproduciendo] = useState(false);
   const [bucle, setBucle] = useState(false);
   const [activas, setActivas] = useState<Record<number, TeclaActiva>>({});
+  const [estadoSonido, setEstadoSonido] = useState<EstadoSonido>("cargando");
+  const [progresoCarga, setProgresoCarga] = useState(0);
 
   const rango = rangoTeclado ?? RANGO_FALLBACK;
   const palabras = coloresMano ?? COLORES_DEFAULT;
@@ -93,9 +112,16 @@ export function TecladoAuto({
   const beatRef = useRef(0);
   const ultimoTsRef = useRef<number | null>(null);
   const rafRef = useRef<number | null>(null);
+  // Contabilidad del despacho: note-ons emitidos, note-offs emitidos, ons
+  // anticipados de la proxima vuelta del bucle, y numero de vuelta (los
+  // stopId son `${vuelta}:${indice}` para que un off viejo jamas corte una
+  // voz nueva del mismo indice).
   const disparadasRef = useRef<Set<number>>(new Set());
+  const apagadasRef = useRef<Set<number>>(new Set());
+  const proximaVueltaRef = useRef<Set<number>>(new Set());
+  const vueltaRef = useRef(0);
   const audioRef = useRef<AudioContext | null>(null);
-  const fuentesRef = useRef<Set<FuenteActiva>>(new Set());
+  const motorRef = useRef<MotorAudio | null>(null);
   const firmaRef = useRef("");
 
   // Copias en ref para que el motor lea el valor vigente sin recrear el loop
@@ -118,56 +144,125 @@ export function TecladoAuto({
     [secuencia],
   );
 
+  // Crea el AudioContext y carga el instrumento al montar. El contexto nace
+  // suspendido hasta el gesto de Play (no viola autoplay: decodificar samples
+  // no requiere contexto corriendo) y asi el primer Play no espera descargas.
+  useEffect(() => {
+    const Ctor =
+      window.AudioContext ||
+      (window as unknown as { webkitAudioContext: typeof AudioContext })
+        .webkitAudioContext;
+    const ac = new Ctor();
+    audioRef.current = ac;
+    // Sin reset sincronico de estadoSonido aca (lo veta react-hooks): el
+    // estado inicial ya es "cargando" y las props que disparan este efecto no
+    // cambian con el ejercicio montado; la promesa de carga fija el estado.
+
+    let vigente = true;
+    const rangoCarga = { minMidi: rango.minMidi, maxMidi: rango.maxMidi };
+    const motor = crearMotorAudio(ac, instrumento, rangoCarga, (cargados, totalArchivos) => {
+      // vigente tambien aca: en StrictMode el motor huerfano del primer
+      // montaje sigue descargando y no debe pisar el progreso del vigente.
+      if (vigente) {
+        setProgresoCarga(totalArchivos > 0 ? Math.round((cargados / totalArchivos) * 100) : 0);
+      }
+    });
+    motorRef.current = motor;
+
+    let idTimeout: number | undefined;
+    const plazo = new Promise<never>((_, rechazar) => {
+      idTimeout = window.setTimeout(
+        () => rechazar(new Error("plazo de carga de samples agotado")),
+        CARGA_TIMEOUT_MS,
+      );
+    });
+    Promise.race([motor.listo, plazo])
+      .then(() => {
+        if (vigente) setEstadoSonido("listo");
+      })
+      .catch((e) => {
+        if (!vigente) return;
+        console.warn("Motor de audio: samples no disponibles, suena el respaldo sintetizado.", e);
+        motorRef.current = crearMotorRespaldo(ac);
+        setEstadoSonido("respaldo");
+      })
+      .finally(() => window.clearTimeout(idTimeout));
+
+    return () => {
+      vigente = false;
+      window.clearTimeout(idTimeout);
+      motorRef.current?.detenerTodo();
+      motor.disponer();
+      motorRef.current = null;
+      audioRef.current = null;
+      void ac.close();
+    };
+    // rango es objeto derivado: se dependen sus numeros para no recrear motor
+    // en cada render.
+  }, [instrumento, rango.minMidi, rango.maxMidi]);
+
   // Motor de reproduccion: corre SOLO mientras reproduciendo === true. El loop
   // vive dentro del efecto (sin autorreferencia de useCallback) y se limpia al
   // pausar, al terminar o al desmontar.
   useEffect(() => {
     if (!reproduciendo) return;
 
-    // Dispara una nota con su DURACION REAL: duracionBeat x 60 / BPM vigente.
-    // La envolvente queda atada a esa duracion (la redonda a 60 BPM suena 4 s).
-    // Tono sintetizado triangular: PLACEHOLDER explicito (motor de audio real:
-    // lote futuro; alerta canonica del Roadmap sigue abierta).
-    const tocarNota = (midi: number, duracionSeg: number) => {
+    // Despacha ons y offs alrededor del beat dado. Los note-ons van
+    // ANTICIPADOS ~150 ms con tiempo ABSOLUTO del reloj de audio (precision
+    // de sample); los note-offs se emiten recien cuando la duracion real
+    // vence, porque la voz debe seguir "playing" hasta el final para que
+    // Reiniciar pueda cortarla (revision adversarial del lote). El BPM solo
+    // estira el tiempo entre notas: jamás toca la altura.
+    const despachar = (beat: number, segsPorBeat: number) => {
       const ac = audioRef.current;
-      if (!ac) return;
-      const osc = ac.createOscillator();
-      const g = ac.createGain();
-      osc.type = "triangle";
-      osc.frequency.value = midiAFrecuencia(midi);
-      const t = ac.currentTime;
-      const fin = t + Math.max(duracionSeg, 0.08);
-      g.gain.setValueAtTime(0.0001, t);
-      g.gain.exponentialRampToValueAtTime(0.22, t + 0.01);
-      g.gain.setValueAtTime(0.22, Math.max(fin - 0.12, t + 0.011));
-      g.gain.exponentialRampToValueAtTime(0.0001, fin);
-      osc.connect(g);
-      g.connect(ac.destination);
-      const fuente: FuenteActiva = { osc, gain: g };
-      fuentesRef.current.add(fuente);
-      osc.onended = () => {
-        fuentesRef.current.delete(fuente);
-        g.disconnect();
-      };
-      osc.start(t);
-      osc.stop(fin + 0.02);
+      const motor = motorRef.current;
+      if (!ac || !motor) return;
+      const lookaheadBeats = LOOKAHEAD_SEG / segsPorBeat;
+      const ahora = ac.currentTime;
+
+      secuencia.forEach((n, i) => {
+        if (!disparadasRef.current.has(i) && n.inicioBeat <= beat + lookaheadBeats) {
+          disparadasRef.current.add(i);
+          const retrasoSeg = Math.max(0, (n.inicioBeat - beat) * segsPorBeat);
+          motor.tocarNota(`${vueltaRef.current}:${i}`, n.pitchMidi, ahora + retrasoSeg);
+        }
+        if (
+          disparadasRef.current.has(i) &&
+          !apagadasRef.current.has(i) &&
+          beat >= n.inicioBeat + n.duracionBeat
+        ) {
+          apagadasRef.current.add(i);
+          motor.detenerNota(`${vueltaRef.current}:${i}`, ahora);
+        }
+        // Con bucle activo, las primeras notas de la PROXIMA vuelta tambien
+        // se anticipan a traves del empalme: sin esto, el primer pulso de
+        // cada vuelta llegaria sistematicamente ~un frame tarde (hipo
+        // ritmico audible; revision adversarial del lote).
+        if (bucleRef.current) {
+          const beatProxima = beat + lookaheadBeats - totalBeats;
+          if (
+            beatProxima >= 0 &&
+            !proximaVueltaRef.current.has(i) &&
+            n.inicioBeat <= beatProxima
+          ) {
+            proximaVueltaRef.current.add(i);
+            const retrasoSeg = Math.max(0, (totalBeats - beat + n.inicioBeat) * segsPorBeat);
+            motor.tocarNota(`${vueltaRef.current + 1}:${i}`, n.pitchMidi, ahora + retrasoSeg);
+          }
+        }
+      });
     };
 
     const paso = (ts: number) => {
       if (ultimoTsRef.current === null) ultimoTsRef.current = ts;
-      const dt = (ts - ultimoTsRef.current) / 1000;
+      const dt = Math.min((ts - ultimoTsRef.current) / 1000, DT_MAX_SEG);
       ultimoTsRef.current = ts;
 
       const segsPorBeat = 60 / bpmRef.current;
       beatRef.current += dt / segsPorBeat;
       const beat = beatRef.current;
 
-      secuencia.forEach((n, i) => {
-        if (!disparadasRef.current.has(i) && n.inicioBeat <= beat) {
-          disparadasRef.current.add(i);
-          tocarNota(n.pitchMidi, (n.duracionBeat * 60) / bpmRef.current);
-        }
-      });
+      despachar(beat, segsPorBeat);
 
       const act: Record<number, TeclaActiva> = {};
       for (const n of secuencia) {
@@ -183,8 +278,15 @@ export function TecladoAuto({
 
       if (beat >= totalBeats) {
         if (bucleRef.current) {
-          beatRef.current = 0;
-          disparadasRef.current = new Set();
+          // Empalme sin hipo: se conserva el excedente del frame (en vez de
+          // forzar 0), se promueve lo ya anticipado de la proxima vuelta y
+          // se despacha de nuevo en este mismo frame.
+          beatRef.current = beat - totalBeats;
+          vueltaRef.current += 1;
+          disparadasRef.current = proximaVueltaRef.current;
+          proximaVueltaRef.current = new Set();
+          apagadasRef.current = new Set();
+          despachar(beatRef.current, segsPorBeat);
         } else {
           beatRef.current = totalBeats;
           firmaRef.current = "";
@@ -204,21 +306,20 @@ export function TecladoAuto({
   }, [reproduciendo, secuencia, totalBeats]);
 
   async function reproducir() {
-    if (!audioRef.current) {
-      const Ctor =
-        window.AudioContext ||
-        (window as unknown as { webkitAudioContext: typeof AudioContext })
-          .webkitAudioContext;
-      audioRef.current = new Ctor();
-    }
-    // resume() dentro del gesto de Play (no viola autoplay) y esperado ANTES
-    // de arrancar, para que la primera nota no caiga con el contexto suspendido.
-    if (audioRef.current.state !== "running") {
-      await audioRef.current.resume();
-    }
+    const ac = audioRef.current;
+    if (!ac) return;
+    // resume() dentro del gesto de Play (no viola autoplay), esperado ANTES
+    // de arrancar e INCONDICIONAL: tras un doble tap Pausa→Play el state
+    // puede leerse "running" con el suspend() de la pausa todavia en vuelo,
+    // y saltear el resume dejaria el contexto congelado en pleno "playing"
+    // (revision adversarial del lote). Sobre un contexto corriendo es no-op.
+    await ac.resume();
     if (beatRef.current >= totalBeats) {
       beatRef.current = 0;
       disparadasRef.current = new Set();
+      apagadasRef.current = new Set();
+      proximaVueltaRef.current = new Set();
+      vueltaRef.current += 1;
     }
     ultimoTsRef.current = null;
     setReproduciendo(true);
@@ -232,49 +333,24 @@ export function TecladoAuto({
     void audioRef.current?.suspend();
   }
 
-  function detenerFuentes() {
-    const ac = audioRef.current;
-    if (!ac) return;
-    for (const f of fuentesRef.current) {
-      try {
-        f.osc.stop(ac.currentTime);
-      } catch {
-        /* la fuente ya habia finalizado */
-      }
-      f.gain.disconnect();
-    }
-    fuentesRef.current.clear();
-  }
-
   function reiniciar() {
-    detenerFuentes();
+    // Las voces siguen "playing" hasta su note-off (no llevan duration), asi
+    // que detenerTodo() SI las corta — incluidas las pre-agendadas en la
+    // ventana de lookahead. vuelta++ por higiene: ningun id viejo puede
+    // tocar una voz futura.
+    motorRef.current?.detenerTodo();
     beatRef.current = 0;
     disparadasRef.current = new Set();
+    apagadasRef.current = new Set();
+    proximaVueltaRef.current = new Set();
+    vueltaRef.current += 1;
     ultimoTsRef.current = null;
     firmaRef.current = "";
     setActivas({});
   }
 
-  // Limpieza al desmontar: detener TODAS las fuentes activas y cerrar el
-  // contexto (solo refs: sin dependencias).
-  useEffect(() => {
-    const fuentes = fuentesRef.current;
-    return () => {
-      const ac = audioRef.current;
-      if (!ac) return;
-      for (const f of fuentes) {
-        try {
-          f.osc.stop();
-        } catch {
-          /* la fuente ya habia finalizado */
-        }
-      }
-      fuentes.clear();
-      void ac.close();
-    };
-  }, []);
-
   const etiquetaRango = `${nombreNota(rango.minMidi)} a ${nombreNota(rango.maxMidi)}`;
+  const cargando = estadoSonido === "cargando";
 
   const teclado = (
     <div
@@ -366,11 +442,18 @@ export function TecladoAuto({
             if (reproduciendo) pausar();
             else void reproducir();
           }}
-          className="inline-flex items-center gap-2 rounded-full bg-jade px-5 py-2.5 text-sm font-semibold text-lino transition-colors hover:bg-jade-claro"
-          aria-label={reproduciendo ? "Pausar" : "Reproducir"}
+          disabled={cargando}
+          className="inline-flex items-center gap-2 rounded-full bg-jade px-5 py-2.5 text-sm font-semibold text-lino transition-colors hover:bg-jade-claro disabled:cursor-wait disabled:opacity-60"
+          aria-label={
+            cargando ? "Preparando el sonido del instrumento" : reproduciendo ? "Pausar" : "Reproducir"
+          }
         >
           {reproduciendo ? <IconoPausa /> : <IconoPlay />}
-          {reproduciendo ? "Pausa" : "Play"}
+          {cargando
+            ? `Preparando sonido… ${progresoCarga}%`
+            : reproduciendo
+              ? "Pausa"
+              : "Play"}
         </button>
 
         <button
@@ -409,6 +492,13 @@ export function TecladoAuto({
           Repetir en bucle
         </label>
       </div>
+
+      {estadoSonido === "respaldo" && (
+        <p className="mt-2 font-sans text-xs text-[#f3ecdf]/60">
+          ⚠️ Está sonando el respaldo sintetizado: no se pudieron cargar los
+          samples del instrumento. Recargá la página para reintentar.
+        </p>
+      )}
     </div>
   );
 }

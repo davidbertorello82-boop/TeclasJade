@@ -90,6 +90,32 @@ export default async function EjercicioPianoPage({
               </div>
             </aside>
           </div>
+
+          {/* Atribucion de los samples del motor de audio (lote SONIDO-1).
+              El piano es dominio publico (AKAI); la guitarra FluidR3 es
+              CC-BY 3.0 y exige credito visible donde se sirve el material. */}
+          <p className="mt-10 font-sans text-[11px] leading-relaxed text-[#f3ecdf]/40">
+            Sonido: piano Splendid Grand (samples de dominio público, AKAI) ·
+            guitarra del banco{" "}
+            <a
+              href="https://member.keymusician.com/Member/FluidR3_GM/index.html"
+              className="underline decoration-[#f3ecdf]/30 underline-offset-2 hover:text-[#f3ecdf]/70"
+              rel="noopener noreferrer"
+              target="_blank"
+            >
+              FluidR3
+            </a>{" "}
+            de Frank Wen (
+            <a
+              href="https://creativecommons.org/licenses/by/3.0/"
+              className="underline decoration-[#f3ecdf]/30 underline-offset-2 hover:text-[#f3ecdf]/70"
+              rel="license noopener noreferrer"
+              target="_blank"
+            >
+              CC-BY 3.0
+            </a>
+            ), render de Benjamin Gleitzman · motor smplr (MIT).
+          </p>
         </div>
       </div>
     </main>

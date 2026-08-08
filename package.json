@@ -9,6 +9,7 @@
     "lint": "eslint",
     "prebuild": "tsx scripts/verificar-adn-embarcado.ts && tsx scripts/verificar-solo-demostracion.ts",
     "test:adn-ui": "tsx src/lib/adn/adaptarAdnPiano.test.ts && tsx scripts/verificar-adn-embarcado.test.ts && tsx scripts/verificar-solo-demostracion.test.ts",
+    "test:audio": "tsx src/lib/audio/motorAudio.test.ts",
     "validar-adn": "tsx adn-musical/validador/validar-adn.ts",
     "cobertura-adn": "tsx adn-musical/validador/cobertura-v01.ts",
     "test:cobertura-adn": "tsx adn-musical/validador/cobertura-v01.test.ts"
@@ -20,7 +21,8 @@
     "next": "16.2.10",
     "react": "19.2.4",
     "react-dom": "19.2.4",
-    "server-only": "^0.0.1"
+    "server-only": "^0.0.1",
+    "smplr": "1.0.0"
   },
   "devDependencies": {
     "@tailwindcss/postcss": "^4",
